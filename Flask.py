@@ -21,7 +21,7 @@ app.config['JWT_SECRET_KEY'] = 'busca-ativa-escolar'
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
 
-@app.route('/register', methods=['POST'])
+@app.route('/usuarios', methods=['POST'])
 def register():
     try:
         data = request.get_json()
