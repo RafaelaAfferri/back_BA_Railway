@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from bson.objectid import ObjectId
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
@@ -8,11 +8,13 @@ import certifi
 import json
 import os
 
+
 string_mongo = "mongodb+srv://admin:admin@cluster0.dc2vjrc.mongodb.net/"
 client_mongo = pymongo.MongoClient(string_mongo, tlsCAFile=certifi.where())
 
 accounts = client_mongo.buscaAtiva.accounts
 tokens = client_mongo.buscaAtiva.tokens
+alunos = client_mongo.buscaAtiva.alunos
 
 app = Flask("Back-End Busca Ativa Escolar")
 CORS(app)
@@ -67,6 +69,77 @@ def logout():
             return {"error": "Invalid token"}, 401
     except Exception as e:
         return {"error": str(e)}, 500
+    
+
+@app.route('/alunoBuscaAtiva', methods=['POST'])
+def registerAluno():
+    try:
+        data = request.get_json()
+        user = {
+            "nome": data["nome"],
+            "turma": data["turma"],
+            "RA": data["RA"],
+            "status": data["status"],
+            "urgencia": data["urgencia"],
+            "endereco": data["endereco"],
+            "telefone": data["telefone"],
+            "telefone2": data["telefone2"],
+            "responsavel": data["responsavel"],
+            "responsavel2": data["responsavel2"],
+        }
+    
+        if alunos.find_one({"RA": data["RA"], "status":"andamento"}):
+            return {"error": "Este aluno tem uma busca ativa não finalizada"}, 400
+        alunos.insert_one(user)
+        return {"message": "User registered successfully"}, 201
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+@app.route('/alunoBuscaAtiva/<string:id>', methods=['GET'])
+def getAluno(id):
+    try:
+        aluno = alunos.find_one({"_id": ObjectId(id), "status":"andamento"})
+        if aluno:
+            aluno['_id'] = str(aluno['_id'])  # Convertendo ObjectId para string para retornar no JSON
+            return jsonify(aluno), 200
+        else:
+            return jsonify({"error": "Aluno não encontrado"}), 404
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+@app.route('/alunoBuscaAtiva/<string:id>', methods=['PUT'])
+def updateAluno(id):
+    try:
+        data = request.get_json()
+        aluno = alunos.find_one({"_id": ObjectId(id), "status":"andamento"})
+        if aluno:
+            if data.get("nome") != aluno["nome"]:
+                aluno["nome"] = data["nome"]
+            if data.get("turma") != aluno["turma"]:
+                aluno["turma"] = data["turma"]
+            if data.get("RA") != aluno["RA"]:
+                aluno["RA"] = data["RA"]
+            if data.get("status") != aluno["status"]:
+                aluno["status"] = data["status"]
+            if data.get("urgencia") != aluno["urgencia"]:
+                aluno["urgencia"] = data["urgencia"]
+            if data.get("endereco") != aluno["endereco"]:
+                aluno["endereco"] = data["endereco"]
+            if data.get("telefone") != aluno["telefone"]:
+                aluno["telefone"] = data["telefone"]
+            if data.get("telefone2") != aluno["telefone2"]:
+                aluno["telefone2"] = data["telefone2"]
+            if data.get("responsavel") != aluno["responsavel"]:
+                aluno["responsavel"] = data["responsavel"]
+            if data.get("responsavel2") != aluno["responsavel2"]:
+                aluno["responsavel2"] = data["responsavel2"]
+            alunos.update_one({"_id": ObjectId(id)}, {"$set": aluno})
+            return jsonify({"message": "Aluno atualizado com sucesso"}), 200
+        else:
+            return jsonify({"error": "Aluno não encontrado"}), 404
+    except Exception as e:
+        return {"error": str(e)}, 500
+
 
 if __name__ == "__main__":
     app.run(debug=True,port = 8000)
