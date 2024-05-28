@@ -267,10 +267,18 @@ def register_caso():
     except Exception as e:
         return {"error": str(e)}, 500
 
+#opacao de filtro por alunos
 @app.route('/casos', methods=['GET'])
 @jwt_required()
 def get_casos():
     try:
+        id_aluno = request.args.get('aluno_id')
+        if id_aluno:
+            data = list(casos.find({"aluno._id": ObjectId(id_aluno)}))
+            for caso in data:
+                caso['_id'] = str(caso['_id'])
+                caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
+            return jsonify({"caso": data}), 200
         data = list(casos.find())
         for caso in data:
             caso['_id'] = str(caso['_id'])
@@ -314,4 +322,4 @@ def delete_caso(id):
 
 
 if __name__ == "__main__":
-    app.run(debug=True,port = 5500)
+    app.run(debug=True,port = 8000)
