@@ -104,22 +104,22 @@ def verificar_login():
 def registerAluno():
     try:
         data = request.get_json()
-        user = {
-            "nome": data["nome"],
-            "turma": data["turma"],
-            "RA": data["RA"],
-            "status": data["status"],
-            "urgencia": data["urgencia"],
-            "endereco": data["endereco"],
-            "telefone": data["telefone"],
-            "telefone2": data["telefone2"],
-            "responsavel": data["responsavel"],
-            "responsavel2": data["responsavel2"],
-        }
+        # user = {
+        #     "nome": data["nome"],
+        #     "turma": data["turma"],
+        #     "RA": data["RA"],
+        #     "status": data["status"],
+        #     "urgencia": data["urgencia"],
+        #     "endereco": data["endereco"],
+        #     "telefone": data["telefone"],
+        #     "telefone2": data["telefone2"],
+        #     "responsavel": data["responsavel"],
+        #     "responsavel2": data["responsavel2"],
+        # }
     
         if alunos.find_one({"RA": data["RA"], "status":"andamento"}):
             return {"error": "Este aluno tem uma busca ativa não finalizada"}, 400
-        alunos.insert_one(user)
+        alunos.insert_one(data)
         return {"message": "User registered successfully"}, 201
     except Exception as e:
         return {"error": str(e)}, 500
