@@ -222,3 +222,48 @@ def deleteAluno(id):
             return jsonify({"error": "Aluno não encontrado"}), 404
     except Exception as e:
         return {"error": str(e)}, 500
+    
+
+@app.route('/alunosBuscaAtiva', methods=['GET'])
+@jwt_required()
+def getAlunos():
+    '''
+    Função para listar todos os alunos
+    Filtros: turma, nome, ano, RA, urgencia, status
+    Ordenação: urgencia, status
+    '''
+    try:
+        data = request.args
+        filters = {}
+        
+        # filtros
+        if "turma" in data:
+            filters["turma"] = data.get("turma")
+        if "nome" in data:
+            filters["nome"] = data.get("nome")
+        if "ano" in data:
+            filters["ano"] = data.get("ano")
+        if "RA" in data:
+            filters["RA"] = data.get("RA")
+        if "urgencia" in data:
+            filters["urgencia"] = data.get("urgencia")
+        if "status" in data:
+            filters["status"] = data.get("status")
+        
+        # ordenação
+        sort_criteria = []
+        if "ordenarPor" in data:
+            order_by = data.get("ordenarPor")
+            if order_by == "urgencia":
+                sort_criteria.append(("urgencia", 1))  # TODO: Lista de urgencias
+            elif order_by == "status":
+                sort_criteria.append(("status", 1)) # TODO: Lista de status
+        
+        alunos_list = []
+        for aluno in alunos.find(filters).sort(sort_criteria):
+            aluno['_id'] = str(aluno['_id'])
+            alunos_list.append(aluno)
+        
+        return jsonify(alunos_list), 200
+    except Exception as e:
+        return {"error": str(e)}, 500
