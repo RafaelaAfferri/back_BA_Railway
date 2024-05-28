@@ -220,6 +220,23 @@ def updateAluno(id):
     except Exception as e:
         return {"error": str(e)}, 500
 
+@app.route('/alunoBuscaAtiva/ra/<string:ra>', methods=['GET'])
+@jwt_required()
+def getAlunoByRA(ra):
+    '''
+    Função para buscar aluno na busca ativa pelo RA
+    '''
+    try:
+        aluno = alunos.find_one({"RA": ra, "status": "andamento"})
+        if aluno:
+            aluno['_id'] = str(aluno['_id'])  # Convertendo ObjectId para string para retornar no JSON
+            return jsonify(aluno), 200
+        else:
+            return jsonify({"error": "Aluno não encontrado"}), 404
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+
 @app.route('/alunoBuscaAtiva/<string:id>', methods=['DELETE'])
 @jwt_required()
 def deleteAluno(id):
