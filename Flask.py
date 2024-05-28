@@ -63,7 +63,38 @@ def register():
         return {"message": "User registered successfully"}, 201
     except Exception as e:
         return {"error": str(e)}, 500
+    
+@app.route('/usuarios/<user_id>', methods=['DELETE'])
+@jwt_required()
+def delete_user(user_id):
+    '''
+    Função para deletar usuário
+    '''
+    try:
+        user = accounts.find_one({"_id": ObjectId(user_id)})
+        if user:
+            accounts.delete_one({"_id": ObjectId(user_id)})
+            return {"message": "User deleted successfully"}, 200
+        else:
+            return {"error": "User not found"}, 404
+    except Exception as e:
+        return {"error": str(e)}, 500
 
+    
+@app.route('/usuarios', methods=['GET'])
+@jwt_required()
+def getUsers():
+    '''
+    Função para listar todos os usuários
+    '''
+    try:
+        users_list = []
+        for user in accounts.find():
+            user['_id'] = str(user['_id'])
+            users_list.append(user)
+        return jsonify(users_list), 200
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 @app.route('/login', methods=['POST'])
 def login():
