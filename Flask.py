@@ -23,8 +23,14 @@ app.config['JWT_SECRET_KEY'] = 'busca-ativa-escolar'
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
 
+
+#SECTION - LOGIN E CADASTRO
+
 @app.route('/usuarios-type', methods=['GET'])
 def getUsuarios():
+    '''
+    Função para retornar o tipo de usuário - determina o que ele pode acessar
+    '''
     try:
         data = request.get_json()
         token = data["token"]
@@ -35,8 +41,12 @@ def getUsuarios():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route('/usuarios', methods=['POST'])
 def register():
+    '''
+    Função para registrar usuário (email, senha, permissão e nome)
+    '''
     try:
         data = request.get_json()
         encrypted_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
@@ -53,8 +63,12 @@ def register():
     except Exception as e:
         return {"error": str(e)}, 500
 
+
 @app.route('/login', methods=['POST'])
 def login():
+    '''
+    Função para realizar login de usuário
+    '''
     try:
         data = request.get_json()
         user = accounts.find_one({'email': data["email"]})
@@ -67,9 +81,13 @@ def login():
     except Exception as e:
         return {"error": str(e)}, 500
     
+
 @app.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
+    '''
+    Função para realizar logout de usuário
+    '''
     try:
         data = request.get_json()
         token = data['token']
@@ -82,9 +100,13 @@ def logout():
     except Exception as e:
         return {"error": str(e)}, 500
     
+
 @app.route('/verificar-login', methods=['POST'])
 @jwt_required()
 def verificar_login():
+    '''
+    Função para verificar se o usuário está logado
+    '''
     try:
         data = request.get_json()
         token = data["token"]
@@ -96,9 +118,16 @@ def verificar_login():
     except Exception as e:
         return {"mensagem": str(e)}, 500
     
+#!SECTION - LOGIN E CADASTRO
+
+
+#SECTION - ALUNOS
 
 @app.route('/alunoBuscaAtiva', methods=['POST'])
 def registerAluno():
+    '''
+    Função para registrar aluno na busca ativa - novo caso
+    '''
     try:
         data = request.get_json()
         user = {
@@ -121,8 +150,12 @@ def registerAluno():
     except Exception as e:
         return {"error": str(e)}, 500
 
+
 @app.route('/alunoBuscaAtiva/<string:id>', methods=['GET'])
 def getAluno(id):
+    '''
+    Função para buscar aluno na busca ativa
+    '''
     try:
         aluno = alunos.find_one({"_id": ObjectId(id), "status":"andamento"})
         if aluno:
@@ -133,8 +166,12 @@ def getAluno(id):
     except Exception as e:
         return {"error": str(e)}, 500
     
+
 @app.route('/alunoBuscaAtiva/<string:id>', methods=['PUT'])
 def updateAluno(id):
+    '''
+    Função para atualizar aluno na busca ativa
+    '''
     try:
         data = request.get_json()
         aluno = alunos.find_one({"_id": ObjectId(id), "status":"andamento"})
@@ -167,5 +204,3 @@ def updateAluno(id):
         return {"error": str(e)}, 500
 
 
-if __name__ == "__main__":
-    app.run(debug=True,port = 8000)
