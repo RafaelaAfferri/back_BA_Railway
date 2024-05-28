@@ -23,9 +23,15 @@ app.config['JWT_SECRET_KEY'] = 'busca-ativa-escolar'
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
 
+
+#SECTION - LOGIN E CADASTRO
+
 @app.route('/usuarios-permissao', methods=['POST'])
 @jwt_required()
 def getUsuarios():
+    '''
+    Função para retornar o tipo de usuário - determina o que ele pode acessar
+    '''
     try:
         data = request.get_json()
         token = data["token"]
@@ -39,6 +45,9 @@ def getUsuarios():
     
 @app.route('/usuarios', methods=['POST'])
 def register():
+    '''
+    Função para registrar usuário (email, senha, permissão e nome)
+    '''
     try:
         data = request.get_json()
         encrypted_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
@@ -55,8 +64,12 @@ def register():
     except Exception as e:
         return {"error": str(e)}, 500
 
+
 @app.route('/login', methods=['POST'])
 def login():
+    '''
+    Função para realizar login de usuário
+    '''
     try:
         data = request.get_json()
         user = accounts.find_one({'email': data["email"]})
@@ -69,9 +82,13 @@ def login():
     except Exception as e:
         return {"error": str(e)}, 500
     
+
 @app.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
+    '''
+    Função para realizar logout de usuário
+    '''
     try:
         data = request.get_json()
         token = data['token']
@@ -84,9 +101,13 @@ def logout():
     except Exception as e:
         return {"error": str(e)}, 500
     
+
 @app.route('/verificar-login', methods=['POST'])
 @jwt_required()
 def verificar_login():
+    '''
+    Função para verificar se o usuário está logado
+    '''
     try:
         data = request.get_json()
         token = data["token"]
@@ -98,9 +119,17 @@ def verificar_login():
     except Exception as e:
         return {"mensagem": str(e)}, 500
     
+#!SECTION - LOGIN E CADASTRO
+
+
+#SECTION - ALUNOS
 
 @app.route('/alunoBuscaAtiva', methods=['POST'])
+@jwt_required()
 def registerAluno():
+    '''
+    Função para registrar aluno na busca ativa - novo caso
+    '''
     try:
         data = request.get_json()
         user = {
@@ -123,8 +152,13 @@ def registerAluno():
     except Exception as e:
         return {"error": str(e)}, 500
 
+
 @app.route('/alunoBuscaAtiva/<string:id>', methods=['GET'])
+@jwt_required()
 def getAluno(id):
+    '''
+    Função para buscar aluno na busca ativa
+    '''
     try:
         aluno = alunos.find_one({"_id": ObjectId(id), "status":"andamento"})
         if aluno:
@@ -135,8 +169,13 @@ def getAluno(id):
     except Exception as e:
         return {"error": str(e)}, 500
     
+
 @app.route('/alunoBuscaAtiva/<string:id>', methods=['PUT'])
+@jwt_required()
 def updateAluno(id):
+    '''
+    Função para atualizar aluno na busca ativa
+    '''
     try:
         data = request.get_json()
         aluno = alunos.find_one({"_id": ObjectId(id), "status":"andamento"})
@@ -169,5 +208,63 @@ def updateAluno(id):
         return {"error": str(e)}, 500
 
 
-if __name__ == "__main__":
-    app.run(debug=True,port = 8000)
+@app.route('/alunoBuscaAtiva/<string:id>', methods=['DELETE'])
+@jwt_required()
+def deleteAluno(id):
+    '''
+    Função para deletar aluno na busca ativa
+    '''
+    try:
+        aluno = alunos.find_one({"_id": ObjectId(id), "status":"andamento"})
+        if aluno:
+            alunos.delete_one({"_id": ObjectId(id)})
+            return jsonify({"message": "Aluno deletado com sucesso"}), 200
+        else:
+            return jsonify({"error": "Aluno não encontrado"}), 404
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+
+@app.route('/alunosBuscaAtiva', methods=['GET'])
+@jwt_required()
+def getAlunos():
+    '''
+    Função para listar todos os alunos
+    Filtros: turma, nome, ano, RA, urgencia, status
+    Ordenação: urgencia, status
+    '''
+    try:
+        data = request.args
+        filters = {}
+        
+        # filtros
+        if "turma" in data:
+            filters["turma"] = data.get("turma")
+        if "nome" in data:
+            filters["nome"] = data.get("nome")
+        if "ano" in data:
+            filters["ano"] = data.get("ano")
+        if "RA" in data:
+            filters["RA"] = data.get("RA")
+        if "urgencia" in data:
+            filters["urgencia"] = data.get("urgencia")
+        if "status" in data:
+            filters["status"] = data.get("status")
+        
+        # ordenação
+        sort_criteria = []
+        if "ordenarPor" in data:
+            order_by = data.get("ordenarPor")
+            if order_by == "urgencia":
+                sort_criteria.append(("urgencia", 1))  # TODO: Lista de urgencias
+            elif order_by == "status":
+                sort_criteria.append(("status", 1)) # TODO: Lista de status
+        
+        alunos_list = []
+        for aluno in alunos.find(filters).sort(sort_criteria):
+            aluno['_id'] = str(aluno['_id'])
+            alunos_list.append(aluno)
+        
+        return jsonify(alunos_list), 200
+    except Exception as e:
+        return {"error": str(e)}, 500
