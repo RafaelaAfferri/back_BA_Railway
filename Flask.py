@@ -124,6 +124,7 @@ def verificar_login():
 #SECTION - ALUNOS
 
 @app.route('/alunoBuscaAtiva', methods=['POST'])
+@jwt_required()
 def registerAluno():
     '''
     Função para registrar aluno na busca ativa - novo caso
@@ -152,6 +153,7 @@ def registerAluno():
 
 
 @app.route('/alunoBuscaAtiva/<string:id>', methods=['GET'])
+@jwt_required()
 def getAluno(id):
     '''
     Função para buscar aluno na busca ativa
@@ -168,6 +170,7 @@ def getAluno(id):
     
 
 @app.route('/alunoBuscaAtiva/<string:id>', methods=['PUT'])
+@jwt_required()
 def updateAluno(id):
     '''
     Função para atualizar aluno na busca ativa
@@ -204,3 +207,18 @@ def updateAluno(id):
         return {"error": str(e)}, 500
 
 
+@app.route('/alunoBuscaAtiva/<string:id>', methods=['DELETE'])
+@jwt_required()
+def deleteAluno(id):
+    '''
+    Função para deletar aluno na busca ativa
+    '''
+    try:
+        aluno = alunos.find_one({"_id": ObjectId(id), "status":"andamento"})
+        if aluno:
+            alunos.delete_one({"_id": ObjectId(id)})
+            return jsonify({"message": "Aluno deletado com sucesso"}), 200
+        else:
+            return jsonify({"error": "Aluno não encontrado"}), 404
+    except Exception as e:
+        return {"error": str(e)}, 500
