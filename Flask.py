@@ -45,12 +45,14 @@ def getUsuarios():
         return jsonify({"error": str(e)}), 500
     
 @app.route('/usuarios', methods=['POST'])
+@jwt_required()
 def register():
     '''
     Função para registrar usuário (email, senha, permissão e nome)
     '''
     try:
         data = request.get_json()
+
         encrypted_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
         user = {
             "email": data["email"],
@@ -94,6 +96,28 @@ def getUsers():
             user['_id'] = str(user['_id'])
             users_list.append(user)
         return jsonify(users_list), 200
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+@app.route('/usuarios/<user_id>', methods=['PUT'])
+@jwt_required()
+def updateUser(user_id):
+    '''
+    Função para atualizar usuário
+    '''
+    try:
+        data = request.get_json()
+        user = accounts.find_one({"_id": ObjectId(user_id)})
+        if data["email"] != user["email"] and accounts.find_one({"email": data["email"]}):
+            return {"error": "Email already registered"}, 400
+        if data["email"] != user["email"]:
+            user["email"] = data["email"]
+        if data["nome"] != user["nome"]:
+            user["nome"] = data["nome"]
+        if data["permissao"] != user["permissao"]:
+            user["permissao"] = data["permissao"]
+        accounts.update_one({"_id": ObjectId(user_id)}, {"$set": user})  
+        return jsonify({"message": "User updated successfully"}), 200          
     except Exception as e:
         return {"error": str(e)}, 500
 
@@ -298,7 +322,7 @@ def getAlunos():
     except Exception as e:
         return {"error": str(e)}, 500
       
-#------------------CASOS------------------
+#------------------CASOS------------------#
 @app.route('/casos', methods=['POST'])
 @jwt_required()
 def register_caso():
