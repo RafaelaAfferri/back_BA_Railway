@@ -146,8 +146,8 @@ def registerAluno():
         #     "responsavel2": data["responsavel2"],
         # }
     
-        if alunos.find_one({"RA": data["RA"], "status":"andamento"}):
-            return {"error": "Este aluno tem uma busca ativa não finalizada"}, 400
+        if alunos.find_one({"RA": data["RA"]}):
+            return {"error": "Este aluno já existe"}, 400
         alunos.insert_one(data)
         return {"message": "User registered successfully"}, 201
     except Exception as e:
@@ -260,6 +260,8 @@ def register_caso():
         aluno = alunos.find_one({"_id": ObjectId(data["aluno"])})
         if not aluno:
             return {"error": "Aluno não encontrado"}, 400
+        if alunos.find_one({"aluno": aluno, "status": "andamento"}):
+            return {"error": "Este aluno já tem um caso em andamento"}, 400
         data["aluno"] = aluno
         #cadastrar na base de dados
         casos.insert_one(data)     
