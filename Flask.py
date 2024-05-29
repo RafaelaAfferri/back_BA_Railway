@@ -26,8 +26,7 @@ bcrypt = Bcrypt(app)
 
 #SECTION - LOGIN E CADASTRO
 
-@app.route('/usuarios-permissao', methods=['POST'])
-@jwt_required()
+@app.route('/usuarios-type', methods=['GET'])
 def getUsuarios():
     '''
     Função para retornar o tipo de usuário - determina o que ele pode acessar
@@ -36,13 +35,13 @@ def getUsuarios():
         data = request.get_json()
         token = data["token"]
         user_token = tokens.find_one({'token': token})
-        email = user_token["email"]
-        user = accounts.find_one({"email": email})
-        permissao = user["permissao"]
-        return jsonify({"permissao": permissao}), 200
+        user = accounts.find_one({"_id": ObjectId(user_token["email"])})
+        permissao_user = user["permissao"]
+        return jsonify({"permissao": permissao_user}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
+
 @app.route('/usuarios', methods=['POST'])
 def register():
     '''
@@ -162,7 +161,7 @@ def getAluno(id):
     try:
         aluno = alunos.find_one({"_id": ObjectId(id), "status":"andamento"})
         if aluno:
-            aluno['_id'] = str(aluno['_id'])  # Convertendo ObjectId para string para retornar no JSON
+            aluno['_id'] = str(aluno['_id'])
             return jsonify(aluno), 200
         else:
             return jsonify({"error": "Aluno não encontrado"}), 404
@@ -269,5 +268,9 @@ def getAlunos():
     except Exception as e:
         return {"error": str(e)}, 500
     
+#!SECTION - ALUNOS
+
+
+
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
