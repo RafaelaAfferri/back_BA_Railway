@@ -17,8 +17,8 @@ body {
 .subtitle {
     text-align: center;
     font-size: 14px;
-    margin-top: 30px;
-    margin-bottom: 20px;
+    margin-top: 40px;
+    margin-bottom: 40px;
 }
 
 .details-table {
@@ -37,22 +37,27 @@ body {
 }
 
 .signature {
-    text-align: center;
-    margin-top: 40px;
+    /* text-align: center; */
+    margin-top: 60px;
 }
 
 .signature p {
-    margin: 0;
+    margin: 10px;
 }
 
 .signature-fields {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 40px;
+    margin-top: 75px;
+    width: 100%;
+}
+
+.signature-fields .label, .signature-fields .date {
+    display: inline-block;
+    vertical-align: top;
+    margin: 0 15px;
 }
 
 .signature-fields .label {
-    width: 300px;
+    width: 469px;
     border-top: 1px solid black;
     text-align: center;
 }

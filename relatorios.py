@@ -24,9 +24,9 @@ context = {
     "turma": "EF - 9D",
     "estudante": "HALLEY HENRIQUE COSTA BARROS (5596013)",
     "rf": "7938985",
-    "usuario": "LETICIA DE ASSIS LOBATO",
+    "usuario": "LETICIA DE ASSIS LOBATO", # TODO - Mudar para o nome do usuario
     "data": "22/05/2024",
-    "data_ocorrencia": "22/05/2024",
+    "data_ocorrencia": "22/05/2024", # TODO - Mudar para data da ocorrencia
     "tipo_ocorrencia": "Atendimento aos Pais/Responsáveis",
     "titulo_ocorrencia": "Frequencia escolar",
     "descricao": ("Nesta data, o responsável pelo estudante compareceu à escola para tomar ciência das faltas referentes ao "
