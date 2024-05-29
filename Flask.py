@@ -7,14 +7,15 @@ import pymongo
 import certifi
 import json
 import os
+import datetime
 
-
-string_mongo = "mongodb+srv://admin:admin@cluster0.dc2vjrc.mongodb.net/"
+string_mongo = "mongodb+srv://admin:admin@cluster0.dc2vjrc.mongodb.net/buscaAtiva?retryWrites=true&w=majority"
 client_mongo = pymongo.MongoClient(string_mongo, tlsCAFile=certifi.where())
 
 accounts = client_mongo.buscaAtiva.accounts
 tokens = client_mongo.buscaAtiva.tokens
 alunos = client_mongo.buscaAtiva.alunos
+casos = client_mongo.buscaAtiva.casos
 
 app = Flask("Back-End Busca Ativa Escolar")
 CORS(app)
@@ -43,12 +44,14 @@ def getUsuarios():
 
 
 @app.route('/usuarios', methods=['POST'])
+@jwt_required()
 def register():
     '''
     Função para registrar usuário (email, senha, permissão e nome)
     '''
     try:
         data = request.get_json()
+
         encrypted_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
         user = {
             "email": data["email"],
@@ -62,7 +65,60 @@ def register():
         return {"message": "User registered successfully"}, 201
     except Exception as e:
         return {"error": str(e)}, 500
+    
+@app.route('/usuarios/<user_id>', methods=['DELETE'])
+@jwt_required()
+def delete_user(user_id):
+    '''
+    Função para deletar usuário
+    '''
+    try:
+        user = accounts.find_one({"_id": ObjectId(user_id)})
+        if user:
+            accounts.delete_one({"_id": ObjectId(user_id)})
+            return {"message": "User deleted successfully"}, 200
+        else:
+            return {"error": "User not found"}, 404
+    except Exception as e:
+        return {"error": str(e)}, 500
 
+    
+@app.route('/usuarios', methods=['GET'])
+@jwt_required()
+def getUsers():
+    '''
+    Função para listar todos os usuários
+    '''
+    try:
+        users_list = []
+        for user in accounts.find():
+            user['_id'] = str(user['_id'])
+            users_list.append(user)
+        return jsonify(users_list), 200
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+@app.route('/usuarios/<user_id>', methods=['PUT'])
+@jwt_required()
+def updateUser(user_id):
+    '''
+    Função para atualizar usuário
+    '''
+    try:
+        data = request.get_json()
+        user = accounts.find_one({"_id": ObjectId(user_id)})
+        if data["email"] != user["email"] and accounts.find_one({"email": data["email"]}):
+            return {"error": "Email already registered"}, 400
+        if data["email"] != user["email"]:
+            user["email"] = data["email"]
+        if data["nome"] != user["nome"]:
+            user["nome"] = data["nome"]
+        if data["permissao"] != user["permissao"]:
+            user["permissao"] = data["permissao"]
+        accounts.update_one({"_id": ObjectId(user_id)}, {"$set": user})  
+        return jsonify({"message": "User updated successfully"}), 200          
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -131,22 +187,22 @@ def registerAluno():
     '''
     try:
         data = request.get_json()
-        user = {
-            "nome": data["nome"],
-            "turma": data["turma"],
-            "RA": data["RA"],
-            "status": data["status"],
-            "urgencia": data["urgencia"],
-            "endereco": data["endereco"],
-            "telefone": data["telefone"],
-            "telefone2": data["telefone2"],
-            "responsavel": data["responsavel"],
-            "responsavel2": data["responsavel2"],
-        }
+        # user = {
+        #     "nome": data["nome"],
+        #     "turma": data["turma"],
+        #     "RA": data["RA"],
+        #     "status": data["status"],
+        #     "urgencia": data["urgencia"],
+        #     "endereco": data["endereco"],
+        #     "telefone": data["telefone"],
+        #     "telefone2": data["telefone2"],
+        #     "responsavel": data["responsavel"],
+        #     "responsavel2": data["responsavel2"],
+        # }
     
-        if alunos.find_one({"RA": data["RA"], "status":"andamento"}):
-            return {"error": "Este aluno tem uma busca ativa não finalizada"}, 400
-        alunos.insert_one(user)
+        if alunos.find_one({"RA": data["RA"]}):
+            return {"error": "Este aluno já existe"}, 400
+        alunos.insert_one(data)
         return {"message": "User registered successfully"}, 201
     except Exception as e:
         return {"error": str(e)}, 500
@@ -179,33 +235,30 @@ def updateAluno(id):
         data = request.get_json()
         aluno = alunos.find_one({"_id": ObjectId(id), "status":"andamento"})
         if aluno:
-            if data.get("nome") != aluno["nome"]:
-                aluno["nome"] = data["nome"]
-            if data.get("turma") != aluno["turma"]:
-                aluno["turma"] = data["turma"]
-            if data.get("RA") != aluno["RA"]:
-                aluno["RA"] = data["RA"]
-            if data.get("status") != aluno["status"]:
-                aluno["status"] = data["status"]
-            if data.get("urgencia") != aluno["urgencia"]:
-                aluno["urgencia"] = data["urgencia"]
-            if data.get("endereco") != aluno["endereco"]:
-                aluno["endereco"] = data["endereco"]
-            if data.get("telefone") != aluno["telefone"]:
-                aluno["telefone"] = data["telefone"]
-            if data.get("telefone2") != aluno["telefone2"]:
-                aluno["telefone2"] = data["telefone2"]
-            if data.get("responsavel") != aluno["responsavel"]:
-                aluno["responsavel"] = data["responsavel"]
-            if data.get("responsavel2") != aluno["responsavel2"]:
-                aluno["responsavel2"] = data["responsavel2"]
-            alunos.update_one({"_id": ObjectId(id)}, {"$set": aluno})
+            if not all(k in data for k in ("nome", "turma", "RA", "status", "urgencia", "endereco", "telefone", "responsavel")):
+                alunos.update_one({"_id": ObjectId(id)}, {"$set": aluno})
             return jsonify({"message": "Aluno atualizado com sucesso"}), 200
         else:
             return jsonify({"error": "Aluno não encontrado"}), 404
     except Exception as e:
         return {"error": str(e)}, 500
 
+@app.route('/alunoBuscaAtiva/ra/<string:ra>', methods=['GET'])
+@jwt_required()
+def getAlunoByRA(ra):
+    '''
+    Função para buscar aluno na busca ativa pelo RA
+    '''
+    try:
+        aluno = alunos.find_one({"RA": ra, "status": "andamento"})
+        if aluno:
+            aluno['_id'] = str(aluno['_id'])  # Convertendo ObjectId para string para retornar no JSON
+            return jsonify(aluno), 200
+        else:
+            return jsonify({"error": "Aluno não encontrado"}), 404
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
 
 @app.route('/alunoBuscaAtiva/<string:id>', methods=['DELETE'])
 @jwt_required()
@@ -267,10 +320,79 @@ def getAlunos():
         return jsonify(alunos_list), 200
     except Exception as e:
         return {"error": str(e)}, 500
+      
+#------------------CASOS------------------#
+@app.route('/casos', methods=['POST'])
+@jwt_required()
+def register_caso():
+    try:
+        data = request.get_json()
+        data["data"] = datetime.datetime.now()
+        aluno = alunos.find_one({"_id": ObjectId(data["aluno"])})
+        if not aluno:
+            return {"error": "Aluno não encontrado"}, 400
+        if alunos.find_one({"aluno": aluno, "status": "andamento"}):
+            return {"error": "Este aluno já tem um caso em andamento"}, 400
+        data["aluno"] = aluno
+        #cadastrar na base de dados
+        casos.insert_one(data)     
+        return {"message": "Caso registrado com sucesso"}, 201
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+#opacao de filtro por alunos
+@app.route('/casos', methods=['GET'])
+@jwt_required()
+def get_casos():
+    try:
+        id_aluno = request.args.get('aluno_id')
+        if id_aluno:
+            data = list(casos.find({"aluno._id": ObjectId(id_aluno)}))
+            for caso in data:
+                caso['_id'] = str(caso['_id'])
+                caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
+            return jsonify({"caso": data}), 200
+        data = list(casos.find())
+        for caso in data:
+            caso['_id'] = str(caso['_id'])
+            caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
+        return jsonify({"caso": data}), 200
+    except Exception as e:
+        return {"error": str(e)}, 500
     
-#!SECTION - ALUNOS
+@app.route('/casos/<string:id>', methods=['PUT'])
+@jwt_required()
+def update_caso(id):
+    try:
+        filter_ = {"_id": ObjectId(id)}
+        projection_ = {}
+        caso = casos.find_one(filter_, projection_)
+        if not caso:
+            return jsonify({"erro": "Caso não encontrado!"}), 404
+        data = request.get_json()
+        aluno = alunos.find_one({"_id": ObjectId(data["aluno"])})
+        if not aluno:
+            return {"error": "Aluno não encontrado"}, 400
+        data["aluno"] = aluno
+        casos.update_one(filter_, {"$set": data})
+        return jsonify({"mensagem": "Caso atualizado com sucesso!"}), 200
+    except Exception as e:
+        return {"erro":str(e)}, 500
+    
+@app.route('/casos/<string:id>', methods=['DELETE'])
+@jwt_required()
+def delete_caso(id):
+    try:
+        caso = casos.find_one({"_id": ObjectId(id)})
+        if caso:
+            casos.delete_one({"_id": ObjectId(id)})
+            return jsonify({"message": "Caso deletado com sucesso"}), 200
+        else:
+            return jsonify({"error": "Caso não encontrado"}), 404
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 
 
-if __name__ == '__main__':
-    app.run(debug=True, port=8000)
+if __name__ == "__main__":
+    app.run(debug=True,port = 8000)
