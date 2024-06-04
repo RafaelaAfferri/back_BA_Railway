@@ -195,7 +195,7 @@ def registerAluno():
         alunos.insert_one(data)
         return {"message": "User registered successfully"}, 201
     except Exception as e:
-        return {"error": str(e)}, 500    
+        return {"error": str(e)}, 500     
     
 @app.route('/alunoBuscaAtiva/<aluno_id>', methods=['PUT'])
 @jwt_required()
@@ -234,7 +234,7 @@ def getAlunoByRA(ra):
     Função para buscar aluno na busca ativa pelo RA
     '''
     try:
-        aluno = alunos.find_one({"RA": ra, "status": "andamento"})
+        aluno = alunos.find_one({"_id": ObjectId(id)})
         if aluno:
             aluno['_id'] = str(aluno['_id'])  # Convertendo ObjectId para string para retornar no JSON
             return jsonify(aluno), 200
@@ -298,12 +298,12 @@ def getAlunosID(aluno_id):
 def register_caso():
     try:
         data = request.get_json()
-        data["data"] = datetime.datetime.now()
         aluno = alunos.find_one({"_id": ObjectId(data["aluno"])})
         if not aluno:
             return {"error": "Aluno não encontrado"}, 400
-        if alunos.find_one({"aluno": aluno, "status": "andamento"}):
-            return {"error": "Este aluno já tem um caso em andamento"}, 400
+        if data["ligacao"]:
+            data["ligacoes"] = [{"abae":data["abae"], "data":data["data"], "telefone":data["telefone"], "observacao":data["observacao"]}]
+            
         data["aluno"] = aluno
         #cadastrar na base de dados
         casos.insert_one(data)     
@@ -317,16 +317,31 @@ def register_caso():
 def get_casos():
     try:
         id_aluno = request.args.get('aluno_id')
+        status = request.args.get('status')
+        if id_aluno and status:
+            data = list(casos.find({"aluno._id": ObjectId(id_aluno), "status": status}))
+            for caso in data:
+                caso['_id'] = str(caso['_id'])
+                caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
+            return jsonify({"caso": data}), 200
+        if status:
+            data = list(casos.find({"status": status}))
+            for caso in data:
+                caso['_id'] = str(caso['_id'])
+                caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
+            return jsonify({"caso": data}), 200
         if id_aluno:
             data = list(casos.find({"aluno._id": ObjectId(id_aluno)}))
             for caso in data:
                 caso['_id'] = str(caso['_id'])
                 caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
             return jsonify({"caso": data}), 200
+        
         data = list(casos.find())
         for caso in data:
             caso['_id'] = str(caso['_id'])
             caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
+            
         return jsonify({"caso": data}), 200
     except Exception as e:
         return {"error": str(e)}, 500
@@ -341,10 +356,13 @@ def update_caso(id):
         if not caso:
             return jsonify({"erro": "Caso não encontrado!"}), 404
         data = request.get_json()
-        aluno = alunos.find_one({"_id": ObjectId(data["aluno"])})
+        aluno = alunos.find_one({"_id": ObjectId(caso["aluno"]["_id"])})
         if not aluno:
             return {"error": "Aluno não encontrado"}, 400
         data["aluno"] = aluno
+        if data["ligacao"]:
+            data["ligacoes"] = caso["ligacoes"]
+            data["ligacoes"].append({"abae":data["abae"], "data":data["data"], "telefone":data["telefone"], "observacao":data["observacao"]})
         casos.update_one(filter_, {"$set": data})
         return jsonify({"mensagem": "Caso atualizado com sucesso!"}), 200
     except Exception as e:
