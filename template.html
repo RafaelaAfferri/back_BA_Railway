@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Ocorrência</title>
+    <link rel="stylesheet" href="template.css">
+</head>
+<body>
+    <div class="header">
+        <img src="{{ logo_path }}" alt="Logotipo">
+    </div>
+    <div class="subtitle">
+        SGP - SISTEMA DE GESTÃO PEDAGÓGICA<br>
+        REGISTRO DE OCORRÊNCIA
+    </div>
+    <table class="details-table">
+        <tr>
+            <td colspan="1"><strong>DRE:</strong> {{ dre }}</td>
+            <td colspan="3"><strong>UNIDADE ESCOLAR (UE):</strong> {{ unidade_escolar }}</td>
+        </tr>
+        <tr>
+            <td colspan="3"><strong>ENDEREÇO:</strong> {{ endereco }}</td>
+            <td colspan="1"><strong>CONTATO:</strong> {{ contato }}</td>
+        </tr>
+        <tr>
+            <td colspan="1"><strong>TURMA:</strong> {{ turma }}</td>
+            <td colspan="2"><strong>Criança/Estudante:</strong> {{ estudante }}</td>
+            <td colspan="1"><strong>RF:</strong> {{ rf }}</td>
+        </tr>
+        <tr>
+            <td colspan="2"><strong>USUÁRIO:</strong> {{ usuario }}</td>
+            <td colspan="1"><strong>DATA:</strong> {{ data }}</td>
+            <td colspan="1"></td>
+        </tr>
+    </table>
+  
+    <table class="details-table" id="table-2">
+        <tr>
+            <td colspan="1" class="gray-bg"><strong>DATA DA OCORRÊNCIA:</strong></td>
+            <td colspan="2">{{ data_ocorrencia }}</td>
+        </tr>
+        <tr>
+            <td colspan="1" class="gray-bg"><strong>TIPO DA OCORRÊNCIA:</strong></td>
+            <td colspan="2">{{ tipo_ocorrencia }}</td>
+        </tr>
+        <tr>
+            <td colspan="1" class="gray-bg"><strong>TÍTULO DA OCORRÊNCIA:</strong></td>
+            <td colspan="2">{{ titulo_ocorrencia }}</td>
+        </tr>
+    </table>
+  
+    <table class="details-table">
+        <tr class="gray-bg">
+            <td colspan="1"><strong>DESCRIÇÃO</strong></td>
+        </tr>
+        <tr>
+            <td colspan="1">{{ descricao }}</td>
+        </tr>
+    </table>
+
+
+    <div class="ligacoes">
+        <h3>LIGAÇÕES</h3>
+        {% for ligacao in ligacoes %}
+        <table class="ligacao-table">
+            <tr>
+                <td class="gray-bg"><b>ABAE RESPONSÁVEL:</b></td>
+                <td>{{ ligacao.responsavel }}</td>
+            </tr>
+            <tr>
+                <td class="gray-bg"><b>DATA DA LIGAÇÃO:</b></td>
+                <td>{{ ligacao.data }}</td>
+            </tr>
+            <tr>
+                <td class="gray-bg"><b>TELEFONE:</b></td>
+                <td>{{ ligacao.telefone }}</td>
+            </tr>
+            <tr>
+                <td class="gray-bg"><b>OBSERVAÇÕES:</b></td>
+                <td>{{ ligacao.observacoes }}</td>
+            </tr>
+        </table>
+        {% endfor %}
+    </div>
+
+
+    <div class="visitas">
+        <h3>VISITAS DOMICILIARES</h3>
+        {% for visita in visitas %}
+        <table class="visitas-table">
+            <tr>
+                <td class="gray-bg"><b>ABAE RESPONSÁVEL:</b></td>
+                <td>{{ visita.responsavel }}</td>
+            </tr>
+            <tr>
+                <td class="gray-bg"><b>DATA DA VISITA:</b></td>
+                <td>{{ visita.data }}</td>
+            </tr>
+            <tr>
+                <td class="gray-bg"><b>PARECER FINAL:</b></td>
+                <td>{{ visita.observacoes }}</td>
+            </tr>
+        </table>
+        {% endfor %}
+    </div>
+    
+  
+    <div class="signature">
+        <p>Estou ciente desta ocorrência</p>
+        <div class="signature-fields">
+            <p class="label">Assinatura do responsável</p>
+            <p class="date">Data assinatura</p>
+        </div>
+    </div>
+</body>
+</html>

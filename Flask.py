@@ -27,8 +27,7 @@ bcrypt = Bcrypt(app)
 
 #SECTION - LOGIN E CADASTRO
 
-@app.route('/usuarios-permissao', methods=['POST'])
-@jwt_required()
+@app.route('/usuarios-type', methods=['GET'])
 def getUsuarios():
     '''
     Função para retornar o tipo de usuário - determina o que ele pode acessar
@@ -37,13 +36,13 @@ def getUsuarios():
         data = request.get_json()
         token = data["token"]
         user_token = tokens.find_one({'token': token})
-        email = user_token["email"]
-        user = accounts.find_one({"email": email})
-        permissao = user["permissao"]
-        return jsonify({"permissao": permissao}), 200
+        user = accounts.find_one({"_id": ObjectId(user_token["email"])})
+        permissao_user = user["permissao"]
+        return jsonify({"permissao": permissao_user}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
+
+
 @app.route('/usuarios', methods=['POST'])
 @jwt_required()
 def register():
@@ -190,11 +189,31 @@ def registerAluno():
         data = request.get_json()
         if alunos.find_one({"RA": data["RA"]}):
             return {"error": "Este aluno já existe"}, 400
+        data["tarefas"] = []
         alunos.insert_one(data)
         return {"message": "User registered successfully"}, 201
     except Exception as e:
         return {"error": str(e)}, 500    
 
+<<<<<<< HEAD
+=======
+
+@app.route('/alunoBuscaAtiva/<string:id>', methods=['GET'])
+@jwt_required()
+def getAluno(id):
+    '''
+    Função para buscar aluno na busca ativa
+    '''
+    try:
+        aluno = alunos.find_one({"_id": ObjectId(id), "status":"andamento"})
+        if aluno:
+            aluno['_id'] = str(aluno['_id'])
+            return jsonify(aluno), 200
+        else:
+            return jsonify({"error": "Aluno não encontrado"}), 404
+    except Exception as e:
+        return {"error": str(e)}, 500
+>>>>>>> 04cf9009b03c3a08e049e7371b0470906bd5d99d
     
 @app.route('/alunoBuscaAtiva/<aluno_id>', methods=['PUT'])
 @jwt_required()
@@ -362,7 +381,22 @@ def delete_caso(id):
     except Exception as e:
         return {"error": str(e)}, 500
 
-
+@app.route('/tarefas/<string:id>', methods=['POST'])
+@jwt_required()
+def register_tarefa(id):
+    try:
+        aluno = alunos.find_one({"_id": ObjectId(id)})
+        if not aluno:
+            return {"error": "Aluno não encontrado"}, 400
+        data = request.get_json()
+        data["data"] = datetime.datetime.now()
+        aluno["tarefas"].append(data)
+        alunos.update_one({"_id": ObjectId(id)}, {"$set": aluno})
+        return {"message": "Tarefa registrada com sucesso"}, 201
+        
+        
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 if __name__ == "__main__":
     app.run(debug=True,port = 8000)
