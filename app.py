@@ -4,12 +4,11 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 import pymongo
 import certifi
-from routes.config import CONFIG
+from config import CONFIG
 
 app = Flask(__name__)
 CORS(app)
 
-# carregando a base de dados
 app.config.from_object(CONFIG)
 
 bcrypt = Bcrypt(app)
