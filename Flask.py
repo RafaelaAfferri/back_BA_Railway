@@ -187,21 +187,9 @@ def registerAluno():
     '''
     try:
         data = request.get_json()
-        # user = {
-        #     "nome": data["nome"],
-        #     "turma": data["turma"],
-        #     "RA": data["RA"],
-        #     "status": data["status"],
-        #     "urgencia": data["urgencia"],
-        #     "endereco": data["endereco"],
-        #     "telefone": data["telefone"],
-        #     "telefone2": data["telefone2"],
-        #     "responsavel": data["responsavel"],
-        #     "responsavel2": data["responsavel2"],
-        # }
-    
         if alunos.find_one({"RA": data["RA"]}):
             return {"error": "Este aluno já existe"}, 400
+        data["tarefas"] = []
         alunos.insert_one(data)
         return {"message": "User registered successfully"}, 201
     except Exception as e:
@@ -363,7 +351,22 @@ def delete_caso(id):
     except Exception as e:
         return {"error": str(e)}, 500
 
-
+@app.route('/tarefas/<string:id>', methods=['POST'])
+@jwt_required()
+def register_tarefa(id):
+    try:
+        aluno = alunos.find_one({"_id": ObjectId(id)})
+        if not aluno:
+            return {"error": "Aluno não encontrado"}, 400
+        data = request.get_json()
+        data["data"] = datetime.datetime.now()
+        aluno["tarefas"].append(data)
+        alunos.update_one({"_id": ObjectId(id)}, {"$set": aluno})
+        return {"message": "Tarefa registrada com sucesso"}, 201
+        
+        
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 if __name__ == "__main__":
     app.run(debug=True,port = 8000)
