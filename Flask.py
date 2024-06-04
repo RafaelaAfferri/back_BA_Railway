@@ -45,12 +45,14 @@ def getUsuarios():
         return jsonify({"error": str(e)}), 500
     
 @app.route('/usuarios', methods=['POST'])
+@jwt_required()
 def register():
     '''
     Função para registrar usuário (email, senha, permissão e nome)
     '''
     try:
         data = request.get_json()
+
         encrypted_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
         user = {
             "email": data["email"],
@@ -94,6 +96,28 @@ def getUsers():
             user['_id'] = str(user['_id'])
             users_list.append(user)
         return jsonify(users_list), 200
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+@app.route('/usuarios/<user_id>', methods=['PUT'])
+@jwt_required()
+def updateUser(user_id):
+    '''
+    Função para atualizar usuário
+    '''
+    try:
+        data = request.get_json()
+        user = accounts.find_one({"_id": ObjectId(user_id)})
+        if data["email"] != user["email"] and accounts.find_one({"email": data["email"]}):
+            return {"error": "Email already registered"}, 400
+        if data["email"] != user["email"]:
+            user["email"] = data["email"]
+        if data["nome"] != user["nome"]:
+            user["nome"] = data["nome"]
+        if data["permissao"] != user["permissao"]:
+            user["permissao"] = data["permissao"]
+        accounts.update_one({"_id": ObjectId(user_id)}, {"$set": user})  
+        return jsonify({"message": "User updated successfully"}), 200          
     except Exception as e:
         return {"error": str(e)}, 500
 
@@ -177,8 +201,8 @@ def registerAluno():
         #     "responsavel2": data["responsavel2"],
         # }
     
-        if alunos.find_one({"RA": data["RA"], "status":"andamento"}):
-            return {"error": "Este aluno tem uma busca ativa não finalizada"}, 400
+        if alunos.find_one({"RA": data["RA"]}):
+            return {"error": "Este aluno já existe"}, 400
         alunos.insert_one(data)
         return {"message": "User registered successfully"}, 201
     except Exception as e:
@@ -220,6 +244,23 @@ def updateAluno(id):
     except Exception as e:
         return {"error": str(e)}, 500
 
+@app.route('/alunoBuscaAtiva/ra/<string:ra>', methods=['GET'])
+@jwt_required()
+def getAlunoByRA(ra):
+    '''
+    Função para buscar aluno na busca ativa pelo RA
+    '''
+    try:
+        aluno = alunos.find_one({"RA": ra, "status": "andamento"})
+        if aluno:
+            aluno['_id'] = str(aluno['_id'])  # Convertendo ObjectId para string para retornar no JSON
+            return jsonify(aluno), 200
+        else:
+            return jsonify({"error": "Aluno não encontrado"}), 404
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+
 @app.route('/alunoBuscaAtiva/<string:id>', methods=['DELETE'])
 @jwt_required()
 def deleteAluno(id):
@@ -241,47 +282,18 @@ def deleteAluno(id):
 @jwt_required()
 def getAlunos():
     '''
-    Função para listar todos os alunos
-    Filtros: turma, nome, ano, RA, urgencia, status
-    Ordenação: urgencia, status
+    Função para listar todos os usuários
     '''
     try:
-        data = request.args
-        filters = {}
-        
-        # filtros
-        if "turma" in data:
-            filters["turma"] = data.get("turma")
-        if "nome" in data:
-            filters["nome"] = data.get("nome")
-        if "ano" in data:
-            filters["ano"] = data.get("ano")
-        if "RA" in data:
-            filters["RA"] = data.get("RA")
-        if "urgencia" in data:
-            filters["urgencia"] = data.get("urgencia")
-        if "status" in data:
-            filters["status"] = data.get("status")
-        
-        # ordenação
-        sort_criteria = []
-        if "ordenarPor" in data:
-            order_by = data.get("ordenarPor")
-            if order_by == "urgencia":
-                sort_criteria.append(("urgencia", 1))  # TODO: Lista de urgencias
-            elif order_by == "status":
-                sort_criteria.append(("status", 1)) # TODO: Lista de status
-        
         alunos_list = []
-        for aluno in alunos.find(filters).sort(sort_criteria):
-            aluno['_id'] = str(aluno['_id'])
-            alunos_list.append(aluno)
-        
+        for alunos1 in alunos.find():
+            alunos1['_id'] = str(alunos1['_id'])
+            alunos_list.append(alunos1)
         return jsonify(alunos_list), 200
     except Exception as e:
         return {"error": str(e)}, 500
       
-#------------------CASOS------------------
+#------------------CASOS------------------#
 @app.route('/casos', methods=['POST'])
 @jwt_required()
 def register_caso():
@@ -291,6 +303,8 @@ def register_caso():
         aluno = alunos.find_one({"_id": ObjectId(data["aluno"])})
         if not aluno:
             return {"error": "Aluno não encontrado"}, 400
+        if alunos.find_one({"aluno": aluno, "status": "andamento"}):
+            return {"error": "Este aluno já tem um caso em andamento"}, 400
         data["aluno"] = aluno
         #cadastrar na base de dados
         casos.insert_one(data)     
@@ -298,10 +312,18 @@ def register_caso():
     except Exception as e:
         return {"error": str(e)}, 500
 
+#opacao de filtro por alunos
 @app.route('/casos', methods=['GET'])
 @jwt_required()
 def get_casos():
     try:
+        id_aluno = request.args.get('aluno_id')
+        if id_aluno:
+            data = list(casos.find({"aluno._id": ObjectId(id_aluno)}))
+            for caso in data:
+                caso['_id'] = str(caso['_id'])
+                caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
+            return jsonify({"caso": data}), 200
         data = list(casos.find())
         for caso in data:
             caso['_id'] = str(caso['_id'])
