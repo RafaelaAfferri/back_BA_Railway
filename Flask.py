@@ -188,61 +188,43 @@ def registerAluno():
     '''
     try:
         data = request.get_json()
-        # user = {
-        #     "nome": data["nome"],
-        #     "turma": data["turma"],
-        #     "RA": data["RA"],
-        #     "status": data["status"],
-        #     "urgencia": data["urgencia"],
-        #     "endereco": data["endereco"],
-        #     "telefone": data["telefone"],
-        #     "telefone2": data["telefone2"],
-        #     "responsavel": data["responsavel"],
-        #     "responsavel2": data["responsavel2"],
-        # }
-    
         if alunos.find_one({"RA": data["RA"]}):
             return {"error": "Este aluno já existe"}, 400
         alunos.insert_one(data)
         return {"message": "User registered successfully"}, 201
     except Exception as e:
-        return {"error": str(e)}, 500
+        return {"error": str(e)}, 500    
 
-
-@app.route('/alunoBuscaAtiva/<string:id>', methods=['GET'])
-@jwt_required()
-def getAluno(id):
-    '''
-    Função para buscar aluno na busca ativa
-    '''
-    try:
-        aluno = alunos.find_one({"_id": ObjectId(id), "status":"andamento"})
-        if aluno:
-            aluno['_id'] = str(aluno['_id'])  # Convertendo ObjectId para string para retornar no JSON
-            return jsonify(aluno), 200
-        else:
-            return jsonify({"error": "Aluno não encontrado"}), 404
-    except Exception as e:
-        return {"error": str(e)}, 500
     
-
-@app.route('/alunoBuscaAtiva/<string:id>', methods=['PUT'])
+@app.route('/alunoBuscaAtiva/<aluno_id>', methods=['PUT'])
 @jwt_required()
-def updateAluno(id):
+def updateAluno(aluno_id):
     '''
-    Função para atualizar aluno na busca ativa
+    Função para atualizar aluno
     '''
     try:
         data = request.get_json()
-        aluno = alunos.find_one({"_id": ObjectId(id), "status":"andamento"})
-        if aluno:
-            if not all(k in data for k in ("nome", "turma", "RA", "status", "urgencia", "endereco", "telefone", "responsavel")):
-                alunos.update_one({"_id": ObjectId(id)}, {"$set": aluno})
-            return jsonify({"message": "Aluno atualizado com sucesso"}), 200
-        else:
-            return jsonify({"error": "Aluno não encontrado"}), 404
+        aluno = alunos.find_one({"_id": ObjectId(aluno_id)})
+        if data["nome"] != aluno["nome"]:
+            aluno["nome"] = data["nome"]
+        if data["turma"] != aluno["turma"]:
+            aluno["turma"] = data["turma"]
+        if data["endereco"] != aluno["endereco"]:
+            aluno["endereco"] = data["endereco"]
+        if data["telefone"] != aluno["telefone"]:
+            aluno["telefone"] = data["telefone"]
+        if data["telefone2"] != aluno["telefone2"]:
+            aluno["telefone2"] = data["telefone2"]
+        if data["responsavel"] != aluno["responsavel"]:
+            aluno["responsavel"] = data["responsavel"]
+        if data["responsavel2"] != aluno["responsavel2"]:
+            aluno["responsavel2"] = data["responsavel2"]
+        alunos.update_one({"_id": ObjectId(aluno_id)}, {"$set": aluno})
+        return jsonify({"message": "User updated successfully"}), 200          
     except Exception as e:
         return {"error": str(e)}, 500
+
+
 
 @app.route('/alunoBuscaAtiva/ra/<string:ra>', methods=['GET'])
 @jwt_required()
@@ -261,24 +243,24 @@ def getAlunoByRA(ra):
         return {"error": str(e)}, 500
     
 
-@app.route('/alunoBuscaAtiva/<string:id>', methods=['DELETE'])
+@app.route('/alunoBuscaAtiva/<aluno_id>', methods=['DELETE'])
 @jwt_required()
-def deleteAluno(id):
+def delete_aluno(aluno_id):
     '''
-    Função para deletar aluno na busca ativa
+    Função para deletar usuário
     '''
     try:
-        aluno = alunos.find_one({"_id": ObjectId(id), "status":"andamento"})
+        aluno = alunos.find_one({"_id": ObjectId(aluno_id)})
         if aluno:
-            alunos.delete_one({"_id": ObjectId(id)})
-            return jsonify({"message": "Aluno deletado com sucesso"}), 200
+            alunos.delete_one({"_id": ObjectId(aluno_id)})
+            return {"message": "Aluna deleted successfully"}, 200
         else:
-            return jsonify({"error": "Aluno não encontrado"}), 404
+            return {"error": "Aluna not found"}, 404
     except Exception as e:
         return {"error": str(e)}, 500
     
 
-@app.route('/alunosBuscaAtiva', methods=['GET'])
+@app.route('/alunoBuscaAtiva', methods=['GET'])
 @jwt_required()
 def getAlunos():
     '''
@@ -290,6 +272,22 @@ def getAlunos():
             alunos1['_id'] = str(alunos1['_id'])
             alunos_list.append(alunos1)
         return jsonify(alunos_list), 200
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+@app.route('/alunoBuscaAtiva/<aluno_id>', methods=['GET'])
+@jwt_required()
+def getAlunosID(aluno_id):
+    '''
+    Função para listar todos os usuários
+    '''
+    try:
+        aluno = alunos.find_one({"_id": ObjectId(aluno_id)})
+        if aluno:
+            aluno['_id'] = str(aluno['_id'])
+            return jsonify(aluno), 200
+        else:
+            return jsonify({"error": "Aluno não encontrado"}), 404
     except Exception as e:
         return {"error": str(e)}, 500
       
