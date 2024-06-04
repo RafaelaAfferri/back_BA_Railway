@@ -1,8 +1,10 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file
 from flask_jwt_extended import jwt_required
 from bson.objectid import ObjectId
 from config import casos, alunos
 import datetime
+from utils import generate_pdf
+import os
 
 casos_bp = Blueprint('casos', __name__)
 
@@ -73,3 +75,37 @@ def delete_caso(id):
             return jsonify({"error": "Caso não encontrado"}), 404
     except Exception as e:
         return {"error": str(e)}, 500
+
+
+@casos_bp.route('/casos/gerar-relatorio', methods=['POST'])
+@jwt_required()
+def gerar_relatorio():
+    try:
+        data = request.get_json()
+
+        context = {
+            "dre": data["dre"],
+            "unidade_escolar": data["unidade_escolar"],
+            "endereco": data["endereco"],
+            "contato": data["contato"],
+            "turma": data["turma"],
+            "estudante": data["estudante"],
+            "rf": data["rf"],
+            "usuario": data["usuario"],
+            "data": data["data"],
+            "data_ocorrencia": data["data_ocorrencia"],
+            "tipo_ocorrencia": data["tipo_ocorrencia"],
+            "titulo_ocorrencia": data["titulo_ocorrencia"],
+            "descricao": data["descricao"],
+            "ligacoes": data["ligacoes"],
+            "visitas": data["visitas"],
+        }
+
+        output_pdf_path = os.path.abspath('relatorio.pdf')
+
+        context["logo_path"] = os.path.abspath('template/logo.png')
+        generate_pdf(context, output_pdf_path)
+
+        return send_file(output_pdf_path, as_attachment=True, download_name='relatorio.pdf')
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
