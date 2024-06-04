@@ -14,6 +14,7 @@ def registerAluno():
             return {"error": "Este aluno já existe"}, 400
         data["nome"] = data["nome"].capitalize()
         data["turma"] = str(data["turma"][0]) + data["turma"][1].upper()
+        data["tarefas"] = []
 
         
 
@@ -21,7 +22,6 @@ def registerAluno():
         caso = {}
         caso["ligacoes"] = []
         caso["visita"] = []
-        caso["tarefas"] = []
         caso["aluno"] = data
         caso["status"] = "EM ABERTO"
         caso["urgencia"] = "NÃO INFORMADO"
