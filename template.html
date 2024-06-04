@@ -58,6 +58,30 @@
             <td colspan="1">{{ descricao }}</td>
         </tr>
     </table>
+
+    <div class="ligacoes">
+        <h3>LIGAÇÕES</h3>
+        {% for ligacao in ligacoes %}
+        <table class="ligacao-table">
+            <tr>
+                <td class="gray-bg"><b>ABAE RESPONSÁVEL:</b></td>
+                <td>{{ ligacao.responsavel }}</td>
+            </tr>
+            <tr>
+                <td class="gray-bg"><b>DATA DA LIGAÇÃO:</b></td>
+                <td>{{ ligacao.data }}</td>
+            </tr>
+            <tr>
+                <td class="gray-bg"><b>TELEFONE:</b></td>
+                <td>{{ ligacao.telefone }}</td>
+            </tr>
+            <tr>
+                <td class="gray-bg"><b>OBSERVAÇÕES:</b></td>
+                <td>{{ ligacao.observacoes }}</td>
+            </tr>
+        </table>
+        {% endfor %}
+    </div>
   
     <div class="signature">
         <p>Estou ciente desta ocorrência</p>

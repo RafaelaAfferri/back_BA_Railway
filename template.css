@@ -17,8 +17,8 @@ body {
 .subtitle {
     text-align: center;
     font-size: 14px;
-    margin-top: 40px;
-    margin-bottom: 40px;
+    margin-top: 30px;
+    margin-bottom: 20px;
 }
 
 .details-table {
@@ -36,28 +36,45 @@ body {
     background-color: #d3d3d3;
 }
 
+.ligacoes {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.ligacao-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.ligacao-table td {
+    text-align: left;
+    border: 1px solid black;
+    padding: 5px;
+}
+
 .signature {
-    /* text-align: center; */
-    margin-top: 60px;
+    text-align: center;
+    margin-top: 40px;
 }
 
 .signature p {
-    margin: 10px;
+    margin: 0;
 }
 
 .signature-fields {
-    margin-top: 75px;
-    width: 100%;
+    margin-top: 40px;
 }
 
 .signature-fields .label, .signature-fields .date {
     display: inline-block;
     vertical-align: top;
-    margin: 0 15px;
+    margin: 0 10px;
+    padding-top: 5px;
 }
 
 .signature-fields .label {
-    width: 469px;
+    width: 300px;
     border-top: 1px solid black;
     text-align: center;
 }
