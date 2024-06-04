@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from bson.objectid import ObjectId
-import datetime
 from config import casos, alunos
+import datetime
 
 casos_bp = Blueprint('casos', __name__)
 
