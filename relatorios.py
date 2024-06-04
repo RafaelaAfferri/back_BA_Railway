@@ -52,12 +52,24 @@ context = {
             "telefone": "(11) XXXX-XXXX",
             "observacoes": "A mãe atendeu mas perdemos a conexão. Não consegui mais contato."
         }
-    ]
+    ],
+    "visitas": [
+        {
+            "responsavel": "João Paulo da Silva",
+            "data": "24/03/2024",
+            "observacoes": "Encontrei e conversei com os pais. O João Carvalho está com problemas de saúde e eles vão pegar atestado para mandar para a escola."
+        },
+        {
+            "responsavel": "João Paulo da Silva",
+            "data": "26/03/2024",
+            "observacoes": "Não encontrei ninguém em casa. Deixei recado na caixa de correio. "
+        }
+    ],
 }
 
 
 template_path = os.path.abspath('template.html')
 css_path = os.path.abspath('template.css')
-output_pdf_path = os.path.abspath('ocorrencia_escolar.pdf')
+output_pdf_path = os.path.abspath('v3.pdf')
 
 generate_pdf(context, template_path, css_path, output_pdf_path)

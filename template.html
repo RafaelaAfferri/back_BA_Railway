@@ -59,6 +59,7 @@
         </tr>
     </table>
 
+
     <div class="ligacoes">
         <h3>LIGAÇÕES</h3>
         {% for ligacao in ligacoes %}
@@ -82,6 +83,28 @@
         </table>
         {% endfor %}
     </div>
+
+
+    <div class="visitas">
+        <h3>VISITAS DOMICILIARES</h3>
+        {% for visita in visitas %}
+        <table class="visitas-table">
+            <tr>
+                <td class="gray-bg"><b>ABAE RESPONSÁVEL:</b></td>
+                <td>{{ visita.responsavel }}</td>
+            </tr>
+            <tr>
+                <td class="gray-bg"><b>DATA DA VISITA:</b></td>
+                <td>{{ visita.data }}</td>
+            </tr>
+            <tr>
+                <td class="gray-bg"><b>PARECER FINAL:</b></td>
+                <td>{{ visita.observacoes }}</td>
+            </tr>
+        </table>
+        {% endfor %}
+    </div>
+    
   
     <div class="signature">
         <p>Estou ciente desta ocorrência</p>
