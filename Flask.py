@@ -195,7 +195,7 @@ def registerAluno():
         alunos.insert_one(data)
         return {"message": "User registered successfully"}, 201
     except Exception as e:
-        return {"error": str(e)}, 500    
+        return {"error": str(e)}, 500     
     
 @app.route('/alunoBuscaAtiva/<aluno_id>', methods=['PUT'])
 @jwt_required()
