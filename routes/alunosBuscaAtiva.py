@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
-import pymongo
 from bson.objectid import ObjectId
 from config import alunos
 
@@ -13,6 +12,9 @@ def registerAluno():
         data = request.get_json()
         if alunos.find_one({"RA": data["RA"]}):
             return {"error": "Este aluno já existe"}, 400
+        data["nome"] = data["nome"].capitalize()
+        data["turma"] = str(data["turma"][0]) + data["turma"][1].upper()
+
         data["tarefas"] = []
         alunos.insert_one(data)
         return {"message": "User registered successfully"}, 201
@@ -64,9 +66,9 @@ def delete_aluno(aluno_id):
         aluno = alunos.find_one({"_id": ObjectId(aluno_id)})
         if aluno:
             alunos.delete_one({"_id": ObjectId(aluno_id)})
-            return {"message": "Aluna deleted successfully"}, 200
+            return {"message": "Aluno deleted successfully"}, 200
         else:
-            return {"error": "Aluna not found"}, 404
+            return {"error": "Aluno not found"}, 404
     except Exception as e:
         return {"error": str(e)}, 500
 

@@ -1,9 +1,8 @@
-from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
-import pymongo
+from flask import Blueprint, request
 from bson.objectid import ObjectId
-import datetime
 from config import alunos
+import datetime
 
 tarefas_bp = Blueprint('tarefas', __name__)
 
