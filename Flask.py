@@ -195,8 +195,6 @@ def registerAluno():
     except Exception as e:
         return {"error": str(e)}, 500    
 
-<<<<<<< HEAD
-=======
 
 @app.route('/alunoBuscaAtiva/<string:id>', methods=['GET'])
 @jwt_required()
@@ -213,7 +211,6 @@ def getAluno(id):
             return jsonify({"error": "Aluno não encontrado"}), 404
     except Exception as e:
         return {"error": str(e)}, 500
->>>>>>> 04cf9009b03c3a08e049e7371b0470906bd5d99d
     
 @app.route('/alunoBuscaAtiva/<aluno_id>', methods=['PUT'])
 @jwt_required()
