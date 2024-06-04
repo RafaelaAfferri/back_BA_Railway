@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from bson.objectid import ObjectId
-from config import alunos
+from config import alunos, casos
 
 alunos_bp = Blueprint('alunos', __name__)
 
@@ -15,8 +15,18 @@ def registerAluno():
         data["nome"] = data["nome"].capitalize()
         data["turma"] = str(data["turma"][0]) + data["turma"][1].upper()
 
-        data["tarefas"] = []
+        
+
         alunos.insert_one(data)
+        caso = {}
+        caso["ligacoes"] = []
+        caso["visita"] = []
+        caso["tarefas"] = []
+        caso["aluno"] = data
+        caso["status"] = "EM ABERTO"
+        caso["urgencia"] = "NÃO INFORMADO"
+        #cadastrar na base de dados
+        casos.insert_one(caso)     
         return {"message": "User registered successfully"}, 201
     except Exception as e:
         return {"error": str(e)}, 500
