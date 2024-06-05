@@ -11,7 +11,7 @@ app = Flask(__name__)
 CORS(app)
 
 app.config.from_object(CONFIG)
-app.config['JWT_EXPIRATION_DELTA'] = datetime.timedelta(seconds=60)
+app.config['JWT_EXPIRATION_DELTA'] = datetime.timedelta(days=10)
 
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
