@@ -17,8 +17,8 @@ def register():
         user = {
             "email": data["email"],
             "password": encrypted_password,
-            "permissao": data["permissao"],
-            "nome": data["nome"]
+            "permissao": data["permissao"].upper(),
+            "nome": data["nome"].capitalize()
         }
         if accounts.find_one({"email": data["email"]}):
             return {"error": "Email already registered"}, 400

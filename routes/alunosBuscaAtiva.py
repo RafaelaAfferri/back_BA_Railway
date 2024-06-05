@@ -15,9 +15,6 @@ def registerAluno():
         data["nome"] = data["nome"].capitalize()
         data["turma"] = str(data["turma"][0]) + data["turma"][1].upper()
         data["tarefas"] = []
-
-        
-
         alunos.insert_one(data)
         caso = {}
         caso["ligacoes"] = []
@@ -36,6 +33,8 @@ def registerAluno():
 def updateAluno(aluno_id):
     try:
         data = request.get_json()
+        data["nome"] = data["nome"].capitalize()
+        data["turma"] = str(data["turma"][0]) + data["turma"][1].upper()
         aluno = alunos.find_one({"_id": ObjectId(aluno_id)})
         if data["nome"] != aluno["nome"]:
             aluno["nome"] = data["nome"]
