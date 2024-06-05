@@ -87,3 +87,20 @@ def getUsuarios():
         return jsonify({"permissao": permissao}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@usuarios_bp.route('/usuarios-dados', methods=['POST'])
+@jwt_required()
+def getDadosUsuario():
+    '''
+    Função para retornar os dados do usuário
+    '''
+    try:
+        data = request.get_json()
+        token = data["token"]
+        user_token = tokens.find_one({'token': token})
+        email = user_token["email"]
+        user = accounts.find_one({"email": email})
+        user["_id"] = str(user["_id"])
+        return jsonify(user), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
