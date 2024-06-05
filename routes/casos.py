@@ -35,26 +35,28 @@ def get_casos():
         id_aluno = request.args.get('aluno_id')
         status = request.args.get('status')
         if id_aluno and status:
-            data = casos.find_one({"aluno._id": ObjectId(id_aluno), "status": status})
-            data['_id'] = str(data['_id'])
-            data["aluno"]["_id"] = str(data["aluno"]["_id"])
+            data = list(casos.find({"aluno._id": ObjectId(id_aluno), "status": status}))
+            for caso in data:
+                caso['_id'] = str(caso['_id'])
+                caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
             return jsonify({"caso": data}), 200
         if status:
-            data = casos.find_one({"status": status})
-
-            data['_id'] = str(data['_id'])
-            data["aluno"]["_id"] = str(data["aluno"]["_id"])
+            data = list(casos.find({"status": status}))
+            for caso in data:
+                caso['_id'] = str(caso['_id'])
+                caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
             return jsonify({"caso": data}), 200
         if id_aluno:
-            data = casos.find_one({"aluno._id": ObjectId(id_aluno)})
-            data['_id'] = str(data['_id'])
-            data["aluno"]["_id"] = str(data["aluno"]["_id"])
+            data = list(casos.find({"aluno._id": ObjectId(id_aluno)}))
+            for caso in data:
+                caso['_id'] = str(caso['_id'])
+                caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
             return jsonify({"caso": data}), 200
         
-        data = casos.find_one()
- 
-        data['_id'] = str(data['_id'])
-        data["aluno"]["_id"] = str(data["aluno"]["_id"])
+        data = list(casos.find())
+        for caso in data:
+            caso['_id'] = str(caso['_id'])
+            caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
             
         return jsonify({"caso": data}), 200
     except Exception as e:
