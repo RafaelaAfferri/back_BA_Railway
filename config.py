@@ -1,10 +1,11 @@
 import pymongo
 import certifi
-from datetime import timedelta
+import datetime
 
 class CONFIG:
     JWT_SECRET_KEY = 'busca-ativa-escolar'
-    JWT_EXPIRATION_DELTA = timedelta(days=15)
+    JWT_VERIFY_EXPIRATION = True
+    JWT_ACCESS_TOKEN_EXPIRES = datetime.timedelta(days=10)
     MONGO_URI = 'mongodb+srv://admin:admin@cluster0.dc2vjrc.mongodb.net/buscaAtiva?retryWrites=true&w=majority'
 
 client_mongo = pymongo.MongoClient(CONFIG.MONGO_URI, tlsCAFile=certifi.where())
