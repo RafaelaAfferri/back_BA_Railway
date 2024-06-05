@@ -21,7 +21,8 @@ def registerAluno():
         alunos.insert_one(data)
         caso = {}
         caso["ligacoes"] = []
-        caso["visita"] = []
+        caso["visitas"] = []
+        caso["atendimentos"] = []
         caso["aluno"] = data
         caso["status"] = "EM ABERTO"
         caso["urgencia"] = "NÃO INFORMADO"
