@@ -115,11 +115,12 @@ def gerar_relatorio():
             "estudante": data["estudante"],
             "ra": data["ra"],
             "usuario": data["usuario"],
-            "data": data["data"],
+            "data": datetime.date.today().strftime("%d-%m-%Y") ,
             "ligacoes": data["ligacoes"],
             "visitas": data["visitas"],
             "atendimentos" : data["atendimentos"],
         }
+        print(context)
 
         output_pdf_path = os.path.abspath('relatorio.pdf')
 

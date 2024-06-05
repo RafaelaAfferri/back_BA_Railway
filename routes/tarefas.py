@@ -1,8 +1,9 @@
 from flask_jwt_extended import jwt_required
-from flask import Blueprint, request
+from flask import Blueprint, request, jsonify
 from bson.objectid import ObjectId
 from config import alunos
 import datetime
+
 
 tarefas_bp = Blueprint('tarefas', __name__)
 
@@ -53,6 +54,22 @@ def update_tarefa(id_aluno, id_tarefa):
                     tarefa[key] = data[key]
                 alunos.update_one({"_id": ObjectId(id_aluno)}, {"$set": aluno})
                 return {"message": "Tarefa atualizada com sucesso"}, 200
+        return {"error": "Tarefa não encontrada"}, 404
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+
+@tarefas_bp.route('/tarefas/<string:id_aluno>', methods=['GET'])
+@jwt_required()
+def get_tarefa(id_aluno):
+    try:
+        aluno = alunos.find_one({"_id": ObjectId(id_aluno)})
+        if not aluno:
+            return {"error": "Aluno não encontrado"}, 400
+        
+        tarefas = aluno["tarefas"]
+        if tarefas:
+            return jsonify(tarefas), 200
         return {"error": "Tarefa não encontrada"}, 404
     except Exception as e:
         return {"error": str(e)}, 500
