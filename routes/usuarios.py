@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
+from config import accounts, tokens
 from bson.objectid import ObjectId
 from flask_bcrypt import Bcrypt
-from config import accounts, tokens
 
 usuarios_bp = Blueprint('usuarios', __name__)
 
