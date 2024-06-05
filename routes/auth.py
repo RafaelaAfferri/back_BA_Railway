@@ -1,11 +1,24 @@
 from flask_jwt_extended import create_access_token, jwt_required
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
 from flask import Blueprint, request
 from config import accounts, tokens
 from flask_bcrypt import Bcrypt
+import datetime
 
 auth_bp = Blueprint('auth', __name__)
 
 bcrypt = Bcrypt()
+
+def remove_expired_tokens():
+    now = datetime.datetime.utcnow()
+    tokens.delete_many({"expira_em": {"$lt": now}})
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=remove_expired_tokens, trigger="interval", minutes=60)
+scheduler.start()
+
+atexit.register(lambda: scheduler.shutdown())
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
@@ -13,8 +26,15 @@ def login():
         data = request.get_json()
         user = accounts.find_one({'email': data["email"]})
         if user and bcrypt.check_password_hash(user['password'], data['password']):
-            access_token = create_access_token(identity=str(user['_id']))
-            tokens.insert_one({"email": data["email"], "token": access_token, "permissao": user["permissao"]})
+            expires = datetime.timedelta(days=10)
+            access_token = create_access_token(identity=str(user['_id']), expires_delta=expires)
+            expira_em = datetime.datetime.utcnow() + expires
+            tokens.insert_one({
+                "email": data["email"], 
+                "token": access_token, 
+                "permissao": user["permissao"], 
+                "expira_em": expira_em
+            })
             return {"token": access_token}, 200
         else:
             return {"error": "Invalid email or password"}, 401

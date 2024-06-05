@@ -2,7 +2,6 @@ from flask import Flask
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-import datetime
 import pymongo
 import certifi
 from config import CONFIG
@@ -11,7 +10,6 @@ app = Flask(__name__)
 CORS(app)
 
 app.config.from_object(CONFIG)
-app.config['JWT_EXPIRATION_DELTA'] = datetime.timedelta(days=10)
 
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
