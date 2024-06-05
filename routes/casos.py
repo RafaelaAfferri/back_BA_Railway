@@ -113,15 +113,12 @@ def gerar_relatorio():
             "contato": data["contato"],
             "turma": data["turma"],
             "estudante": data["estudante"],
-            "rf": data["rf"],
+            "ra": data["ra"],
             "usuario": data["usuario"],
             "data": data["data"],
-            "data_ocorrencia": data["data_ocorrencia"],
-            "tipo_ocorrencia": data["tipo_ocorrencia"],
-            "titulo_ocorrencia": data["titulo_ocorrencia"],
-            "descricao": data["descricao"],
             "ligacoes": data["ligacoes"],
             "visitas": data["visitas"],
+            "atendimentos" : data["atendimentos"],
         }
 
         output_pdf_path = os.path.abspath('relatorio.pdf')

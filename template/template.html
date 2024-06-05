@@ -26,36 +26,12 @@
         <tr>
             <td colspan="1"><strong>TURMA:</strong> {{ turma }}</td>
             <td colspan="2"><strong>Criança/Estudante:</strong> {{ estudante }}</td>
-            <td colspan="1"><strong>RF:</strong> {{ rf }}</td>
+            <td colspan="1"><strong>RA:</strong> {{ rf }}</td>
         </tr>
         <tr>
             <td colspan="2"><strong>USUÁRIO:</strong> {{ usuario }}</td>
             <td colspan="1"><strong>DATA:</strong> {{ data }}</td>
             <td colspan="1"></td>
-        </tr>
-    </table>
-  
-    <table class="details-table" id="table-2">
-        <tr>
-            <td colspan="1" class="gray-bg"><strong>DATA DA OCORRÊNCIA:</strong></td>
-            <td colspan="2">{{ data_ocorrencia }}</td>
-        </tr>
-        <tr>
-            <td colspan="1" class="gray-bg"><strong>TIPO DA OCORRÊNCIA:</strong></td>
-            <td colspan="2">{{ tipo_ocorrencia }}</td>
-        </tr>
-        <tr>
-            <td colspan="1" class="gray-bg"><strong>TÍTULO DA OCORRÊNCIA:</strong></td>
-            <td colspan="2">{{ titulo_ocorrencia }}</td>
-        </tr>
-    </table>
-  
-    <table class="details-table">
-        <tr class="gray-bg">
-            <td colspan="1"><strong>DESCRIÇÃO</strong></td>
-        </tr>
-        <tr>
-            <td colspan="1">{{ descricao }}</td>
         </tr>
     </table>
 
@@ -100,6 +76,30 @@
             <tr>
                 <td class="gray-bg"><b>PARECER FINAL:</b></td>
                 <td>{{ visita.observacoes }}</td>
+            </tr>
+        </table>
+        {% endfor %}
+    </div>
+
+    <div class="atendimento">
+        <h3>ANTEDIMENTOS AOS  RESPONSÁVEIS</h3>
+        {% for visita in visitas %}
+        <table class="atendimento-table">
+            <tr>
+                <td class="gray-bg"><b>FEITO POR:</b></td>
+                <td>{{ atendimentos.func }}</td>
+            </tr>
+            <tr>
+                <td class="gray-bg"><b>DATA Do ATENDIMENTO:</b></td>
+                <td>{{ atendimentos.data }}</td>
+            </tr>
+            <tr>
+                <td class="gray-bg"><b>RESPONSÁVEL PRESENTE:</b></td>
+                <td>{{ atendimentos.responsavel }}</td>
+            </tr>
+            <tr>
+                <td class="gray-bg"><b>OBERSAVAÇÕES:</b></td>
+                <td>{{ atendimentos.observacoes }}</td>
             </tr>
         </table>
         {% endfor %}
