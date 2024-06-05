@@ -15,9 +15,6 @@ def registerAluno():
         data["nome"] = data["nome"].capitalize()
         data["turma"] = str(data["turma"][0]) + data["turma"][1].upper()
         data["tarefas"] = []
-
-        
-
         alunos.insert_one(data)
         caso = {}
         caso["ligacoes"] = []
