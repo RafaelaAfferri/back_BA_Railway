@@ -38,3 +38,21 @@ def register_tarefa(id):
         return {"message": "Tarefa registrada com sucesso"}, 201
     except Exception as e:
         return {"error": str(e)}, 500
+    
+@tarefas_bp.route('/tarefas/<string:id_aluno>/<string:id_tarefa>', methods=['PUT'])
+@jwt_required()
+def update_tarefa(id_aluno, id_tarefa):
+    try:
+        aluno = alunos.find_one({"_id": ObjectId(id_aluno)})
+        if not aluno:
+            return {"error": "Aluno não encontrado"}, 400
+        for tarefa in aluno["tarefas"]:
+            if tarefa["_id"] == id_tarefa:
+                data = request.get_json()
+                for key in data:
+                    tarefa[key] = data[key]
+                alunos.update_one({"_id": ObjectId(id_aluno)}, {"$set": aluno})
+                return {"message": "Tarefa atualizada com sucesso"}, 200
+        return {"error": "Tarefa não encontrada"}, 404
+    except Exception as e:
+        return {"error": str(e)}, 500
