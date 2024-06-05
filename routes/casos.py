@@ -14,11 +14,12 @@ casos_bp = Blueprint('casos', __name__)
 #     try:
 #         data = request.get_json()
 #         aluno = alunos.find_one({"_id": ObjectId(data["aluno"])})
+#         data["urgencia"] = data["urgencia"].upper()
+#         data["status"] = data["status"].upper()
 #         if not aluno:
 #             return {"error": "Aluno não encontrado"}, 400
 #         if data["ligacao"]:
 #             data["ligacoes"] = [{"abae":data["abae"], "data":data["data"], "telefone":data["telefone"], "observacao":data["observacao"]}]
-            
 #         data["aluno"] = aluno
 #         #cadastrar na base de dados
 #         casos.insert_one(data)     
