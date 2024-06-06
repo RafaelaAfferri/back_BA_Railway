@@ -22,7 +22,7 @@ def registerAluno():
         caso["atendimentos"] = []
         caso["aluno"] = data
         caso["status"] = "EM ABERTO"
-        caso["urgencia"] = "NÃO INFORMADO"
+        caso["urgencia"] = "NAO INFORMADO"
         #cadastrar na base de dados
         casos.insert_one(caso)     
         return {"message": "User registered successfully"}, 201
