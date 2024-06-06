@@ -83,6 +83,9 @@ def update_caso(id):
         
         if "atendimento" in data and data["atendimento"]:
             caso["atendimentos"].append({"func":data["func"], "data":data["data"], "observacao":data["observacao"], "responsavel":data["responsavel"]})
+        caso["urgencia"] = data["urgencia"]
+        caso["status"] = data["status"]
+        
         casos.update_one(filter_, {"$set": caso})
         return jsonify({"mensagem": "Caso atualizado com sucesso!"}), 200
     except Exception as e:
