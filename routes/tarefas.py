@@ -15,7 +15,7 @@ def delete_tarefa(id_aluno, id_tarefa):
         if not aluno:
             return {"error": "Aluno não encontrado"}, 400
         for tarefa in aluno["tarefas"]:
-            if tarefa["_id"] == id_tarefa:
+            if tarefa.get("_id") == id_tarefa:
                 aluno["tarefas"].remove(tarefa)
                 alunos.update_one({"_id": ObjectId(id_aluno)}, {"$set": aluno})
                 return {"message": "Tarefa deletada com sucesso"}, 200
@@ -48,7 +48,8 @@ def update_tarefa(id_aluno, id_tarefa):
         if not aluno:
             return {"error": "Aluno não encontrado"}, 400
         for tarefa in aluno["tarefas"]:
-            if tarefa["_id"] == id_tarefa:
+            print(tarefa)
+            if tarefa.get("_id") == id_tarefa:
                 data = request.get_json()
                 for key in data:
                     tarefa[key] = data[key]
