@@ -75,6 +75,7 @@ def delete_aluno(aluno_id):
     try:
         aluno = alunos.find_one({"_id": ObjectId(aluno_id)})
         if aluno:
+            casos.delete_one({"aluno._id": ObjectId(aluno_id)})
             alunos.delete_one({"_id": ObjectId(aluno_id)})
             return {"message": "Aluno deleted successfully"}, 200
         else:
@@ -102,6 +103,23 @@ def getAlunosID(aluno_id):
         if aluno:
             aluno['_id'] = str(aluno['_id'])
             return jsonify(aluno), 200
+        else:
+            return jsonify({"error": "Aluno não encontrado"}), 404
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+
+
+@alunos_bp.route('/alunoBuscaAtiva/caso/<caso_id>', methods=['GET'])
+@jwt_required()
+def getAlunosCasoId(caso_id):
+    try:
+        caso = casos.find_one({"_id": ObjectId(caso_id)})
+        if caso:
+            aluno = alunos.find_one({"_id": ObjectId(caso["aluno"]["_id"])})
+            aluno['_id'] = str(aluno['_id'])
+            return jsonify(aluno), 200
+       
         else:
             return jsonify({"error": "Aluno não encontrado"}), 404
     except Exception as e:
