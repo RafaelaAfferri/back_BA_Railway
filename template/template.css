@@ -76,6 +76,24 @@ body {
     padding: 5px;
 }
 
+/* Atendimentos aos pais */
+
+.atendimento {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.atendimento-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+.atendimento-table td {
+    text-align: left;
+    border: 1px solid black;
+    padding: 5px;
+}
 
 /* Assinatura */
 

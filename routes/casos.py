@@ -76,10 +76,14 @@ def update_caso(id):
         if not aluno:
             return {"error": "Aluno não encontrado"}, 400
         data["aluno"] = aluno
-        if data["ligacao"]:
-            data["ligacoes"] = caso["ligacoes"]
-            data["ligacoes"].append({"abae":data["abae"], "data":data["data"], "telefone":data["telefone"], "observacao":data["observacao"]})
-        casos.update_one(filter_, {"$set": data})
+        if "ligacao" in data and data["ligacao"]:
+            caso["ligacoes"].append({"abae":data["abae"], "data":data["data"], "telefone":data["telefone"], "observacao":data["observacao"]})
+        if "visita" in data and data["visita"]:
+            caso["visitas"].append({"abae":data["abae"], "data":data["data"], "observacao":data["observacao"]})
+        
+        if "atendimento" in data and data["atendimento"]:
+            caso["atendimentos"].append({"func":data["func"], "data":data["data"], "observacao":data["observacao"], "responsavel":data["responsavel"]})
+        casos.update_one(filter_, {"$set": caso})
         return jsonify({"mensagem": "Caso atualizado com sucesso!"}), 200
     except Exception as e:
         return {"erro":str(e)}, 500
@@ -111,16 +115,14 @@ def gerar_relatorio():
             "contato": data["contato"],
             "turma": data["turma"],
             "estudante": data["estudante"],
-            "rf": data["rf"],
+            "ra": data["ra"],
             "usuario": data["usuario"],
-            "data": data["data"],
-            "data_ocorrencia": data["data_ocorrencia"],
-            "tipo_ocorrencia": data["tipo_ocorrencia"],
-            "titulo_ocorrencia": data["titulo_ocorrencia"],
-            "descricao": data["descricao"],
+            "data": datetime.date.today().strftime("%d-%m-%Y") ,
             "ligacoes": data["ligacoes"],
             "visitas": data["visitas"],
+            "atendimentos" : data["atendimentos"],
         }
+        print(context)
 
         output_pdf_path = os.path.abspath('relatorio.pdf')
 
