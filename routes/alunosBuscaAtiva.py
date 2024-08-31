@@ -15,6 +15,10 @@ def registerAluno():
         data["nome"] = data["nome"].capitalize()
         data["turma"] = str(data["turma"][0]) + data["turma"][1].upper()
         data["tarefas"] = []
+        ano = int(data["dataNascimento"][0:4])
+        mes = int(data["dataNascimento"][5:7])
+        dia = int(data["dataNascimento"][8:10])
+        data["dataNascimento"] = f"{dia}/{mes}/{ano}"
         alunos.insert_one(data)
         caso = {}
         caso["ligacoes"] = []
@@ -22,7 +26,13 @@ def registerAluno():
         caso["atendimentos"] = []
         caso["aluno"] = data
         caso["status"] = "EM ABERTO"
-        caso["urgencia"] = "NAO INFORMADO"
+        caso["faltas"] = int(data["faltas"])
+        if caso["faltas"] > 20:
+            caso["urgencia"] = "MEDIA"
+        elif caso["faltas"] > 40:
+            caso["urgencia"] = "ALTA"
+        else: 
+            caso["urgencia"] = "BAIXA"
         #cadastrar na base de dados
         casos.insert_one(caso)     
         return {"message": "User registered successfully"}, 201
