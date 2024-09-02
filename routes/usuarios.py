@@ -88,19 +88,38 @@ def getUsuarios():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# @usuarios_bp.route('/usuarios-dados', methods=['POST'])
+# @jwt_required()
+# def getDadosUsuario():
+#     '''
+#     Função para retornar os dados do usuário
+#     '''
+#     try:
+#         data = request.get_json()
+#         token = data["token"]
+#         user_token = tokens.find_one({'token': token})
+#         email = user_token["email"]
+#         user = accounts.find_one({"email": email})
+#         user["_id"] = str(user["_id"])
+#         return jsonify(user), 200
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+
 @usuarios_bp.route('/usuarios-dados', methods=['POST'])
 @jwt_required()
 def getDadosUsuario():
-    '''
-    Função para retornar os dados do usuário
-    '''
     try:
         data = request.get_json()
         token = data["token"]
         user_token = tokens.find_one({'token': token})
+        if not user_token:
+            raise ValueError("Token inválido ou não encontrado")
         email = user_token["email"]
         user = accounts.find_one({"email": email})
+        if not user:
+            raise ValueError("Usuário não encontrado")
         user["_id"] = str(user["_id"])
         return jsonify(user), 200
     except Exception as e:
+        print(f"Erro no backend: {str(e)}")  # Log de erro detalhado
         return jsonify({"error": str(e)}), 500
