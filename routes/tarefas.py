@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify
 from bson.objectid import ObjectId
 from config import alunos
 import datetime
+import pytz
 
 
 tarefas_bp = Blueprint('tarefas', __name__)
@@ -32,7 +33,6 @@ def register_tarefa(id):
             return {"error": "Aluno não encontrado"}, 400
         data = request.get_json()
         data["_id"] = str(ObjectId())
-        data["data"] = datetime.datetime.now()
         data["status"] = "Em andamento"
         aluno["tarefas"].append(data)
         alunos.update_one({"_id": ObjectId(id)}, {"$set": aluno})
@@ -69,8 +69,10 @@ def get_tarefa(id_aluno):
             return {"error": "Aluno não encontrado"}, 400
         
         tarefas = aluno["tarefas"]
+
         if tarefas:
             return jsonify(tarefas), 200
         return {"error": "Tarefa não encontrada"}, 404
     except Exception as e:
         return {"error": str(e)}, 500
+

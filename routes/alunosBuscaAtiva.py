@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from bson.objectid import ObjectId
 from config import alunos, casos
+import datetime
+import pytz
 
 alunos_bp = Blueprint('alunos', __name__)
 
@@ -14,11 +16,8 @@ def registerAluno():
             return {"error": "Este aluno já existe"}, 400
         data["nome"] = data["nome"].capitalize()
         data["turma"] = str(data["turma"][0]) + data["turma"][1].upper()
+        data["dataNascimento"] = data["dataNascimento"]
         data["tarefas"] = []
-        ano = int(data["dataNascimento"][0:4])
-        mes = int(data["dataNascimento"][5:7])
-        dia = int(data["dataNascimento"][8:10])
-        data["dataNascimento"] = f"{dia}/{mes}/{ano}"
         alunos.insert_one(data)
         caso = {}
         caso["ligacoes"] = []
@@ -53,6 +52,8 @@ def updateAluno(aluno_id):
             aluno["turma"] = data["turma"]
         if data["endereco"] != aluno["endereco"]:
             aluno["endereco"] = data["endereco"]
+        if data["dataNascimento"] != aluno["dataNascimento"]:
+            aluno["dataNascimento"] = data["dataNascimento"]
         if data["telefone"] != aluno["telefone"]:
             aluno["telefone"] = data["telefone"]
         if data["telefone2"] != aluno["telefone2"]:
@@ -111,6 +112,9 @@ def getAlunosID(aluno_id):
     try:
         aluno = alunos.find_one({"_id": ObjectId(aluno_id)})
         if aluno:
+            tarefas = aluno["tarefas"]
+            tarefas = update_status(tarefas)
+            aluno["tarefas"] = tarefas
             aluno['_id'] = str(aluno['_id'])
             return jsonify(aluno), 200
         else:
@@ -134,3 +138,23 @@ def getAlunosCasoId(caso_id):
             return jsonify({"error": "Aluno não encontrado"}), 404
     except Exception as e:
         return {"error": str(e)}, 500
+    
+
+
+def update_status(tarefas):
+    for tarefa in tarefas:
+        if "dataFinal" in tarefa:
+            prazo_final_str = tarefa["dataFinal"]
+            
+            prazo_final = datetime.datetime.fromisoformat(prazo_final_str.replace("Z", "+00:00"))
+            if tarefa["status"] == "Finalizado":
+                tarefa["status"] = "Finalizado"
+            elif prazo_final < datetime.datetime.now(pytz.UTC) and tarefa["status"] != "Finalizdo":
+                print(prazo_final)
+                tarefa["status"] = "Atrasada"
+            elif tarefa["status"] == "Em andamento" and prazo_final > datetime.datetime.now(pytz.UTC):
+                tarefa["status"] = "Em andamento"   
+
+            else:
+                tarefa["status"] = "Em andamento"
+    return tarefas
