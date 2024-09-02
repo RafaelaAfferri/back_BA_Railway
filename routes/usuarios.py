@@ -9,7 +9,7 @@ usuarios_bp = Blueprint('usuarios', __name__)
 bcrypt = Bcrypt()
 
 @usuarios_bp.route('/usuarios', methods=['POST'])
-@jwt_required()
+# @jwt_required()
 def register():
     try:
         data = request.get_json()
