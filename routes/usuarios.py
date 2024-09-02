@@ -113,7 +113,7 @@ def getDadosUsuario():
         token = data["token"]
         user_token = tokens.find_one({'token': token})
         if not user_token:
-            raise ValueError("Token inválido ou não encontrado")
+            raise ValueError("Token inválido ou não encontrado", token)
         email = user_token["email"]
         user = accounts.find_one({"email": email})
         if not user:
