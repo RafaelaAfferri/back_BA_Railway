@@ -7,7 +7,7 @@ import certifi
 from config import CONFIG
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "https://front-ba-five.vercel.app"}})
+CORS(app)
 
 
 

@@ -127,7 +127,6 @@ def gerar_relatorio():
             "visitas": data["visitas"],
             "atendimentos" : data["atendimentos"],
         }
-        print(context)
 
         output_pdf_path = os.path.abspath('relatorio.pdf')
 
@@ -136,4 +135,5 @@ def gerar_relatorio():
 
         return send_file(output_pdf_path, as_attachment=True, download_name='relatorio.pdf')
     except Exception as e:
+        print(e)
         return jsonify({"error": str(e)}), 500
