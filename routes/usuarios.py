@@ -3,10 +3,16 @@ from flask_jwt_extended import jwt_required
 from config import accounts, tokens
 from bson.objectid import ObjectId
 from flask_bcrypt import Bcrypt
+import os
 
 usuarios_bp = Blueprint('usuarios', __name__)
 
 bcrypt = Bcrypt()
+
+@usuarios_bp.route('/port')
+def check_port():
+    return f'PORT: {os.getenv("PORT")}'
+
 
 @usuarios_bp.route('/usuarios', methods=['POST'])
 @jwt_required()
