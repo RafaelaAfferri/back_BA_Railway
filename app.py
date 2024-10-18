@@ -5,9 +5,11 @@ from flask_jwt_extended import JWTManager
 import pymongo
 import certifi
 from config import CONFIG
+import os
 
 app = Flask(__name__)
 CORS(app)
+
 
 
 
@@ -31,4 +33,6 @@ app.register_blueprint(casos_bp)
 app.register_blueprint(tarefas_bp)
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8000)
+    # app.run(debug=True, port=8000)
+    port = int(os.environ.get("PORT", 5000))  # Default to 5000 for local testing
+    app.run(host='0.0.0.0', port=port)
