@@ -12,8 +12,8 @@ def generate_pdf(context, output_path):
     
     html_out = template.render(context)
     css_abs_path = os.path.abspath('./template/template.css')
-    # PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf='/app/bin/wkhtmltopdf')
-    PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf="C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe")
+    PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf='/app/bin/wkhtmltopdf')
+    # PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf="C:/Program Files/wkhtmltopdf/bin/wkhtmltopdf.exe")
 
     
     pdfkit.from_string(html_out, output_path, options={"enable-local-file-access": ""}, css=css_abs_path, configuration=PDFKIT_CONFIG)
