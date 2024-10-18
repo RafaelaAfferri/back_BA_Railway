@@ -32,4 +32,4 @@ app.register_blueprint(casos_bp)
 app.register_blueprint(tarefas_bp)
 
 if __name__ == "__main__":
-    app.run(port=8000)
+    app.run(debug=True, port=8000)
