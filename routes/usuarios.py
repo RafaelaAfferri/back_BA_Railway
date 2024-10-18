@@ -14,7 +14,7 @@ def check_port():
     return f'PORT: {os.getenv("PORT")}'
 
 
-@usuarios_bp.route('/teste', methods=['POST'])
+@usuarios_bp.route('/teste', methods=['GET'])
 def test():
     return 'hello'
 
