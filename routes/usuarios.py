@@ -14,6 +14,10 @@ def check_port():
     return f'PORT: {os.getenv("PORT")}'
 
 
+@usuarios_bp.route('/teste', methods=['POST'])
+def test():
+    return 'hello'
+
 @usuarios_bp.route('/usuarios', methods=['POST'])
 @jwt_required()
 def register():
