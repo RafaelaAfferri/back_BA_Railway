@@ -24,4 +24,4 @@ ENV HOST 0.0.0.0
 EXPOSE 8080
 
 # Comando para rodar o Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
