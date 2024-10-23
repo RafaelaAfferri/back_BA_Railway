@@ -4,6 +4,12 @@ FROM python:3.10-slim
 # Instalar dependências do sistema
 RUN apt-get update && apt-get install -y \
     wkhtmltopdf \
+    build-essential \
+    python3-dev \
+    libxml2-dev \
+    libxslt1-dev \
+    zlib1g-dev \
+    libjpeg-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
