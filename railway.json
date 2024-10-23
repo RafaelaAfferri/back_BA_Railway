@@ -4,7 +4,7 @@
         "builder": "NIXPACKS"
     },
     "deploy": {
-        "startCommand": "dokcer run  -p 8080:8080 back_ba_railway",
+        "startCommand": "docker run  -p 8080:8080 back_ba_railway",
         "restartPolicyType": "ON_FAILURE",
         "restartPolicyMaxRetries": 10
     }
