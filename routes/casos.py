@@ -201,7 +201,7 @@ def relatorio_geral():
         excel_file.seek(0)
         
         # Generate filename with timestamp
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         if turma and ano:
             filename = f'relatorio_geral_{turma}_{ano}_{timestamp}.xlsx'
         elif turma:
