@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, make_response
 from flask_jwt_extended import jwt_required
 from bson.objectid import ObjectId
 from config import casos, alunos
@@ -106,10 +106,17 @@ def relatorio_geral():
         n_visita =0
         n_ligacao = 0
         n_atendimento = 0
+        query = {}
+        print("oi")
+        print(turma)
+
         if turma:
-            data = list(casos.find({"aluno.turma": turma}))
-        else:
-            data = list(casos.find())
+            if len(turma) == 1:  # Se a turma for apenas o número, buscar todas que começam com esse número
+                query["aluno.turma"] = {"$regex": f"^{turma}"}  # Regex para buscar turmas que começam com 'turma'
+            else:  # Caso contrário, buscar exatamente pela turma
+                query["aluno.turma"] = turma
+        
+        data = list(casos.find(query))
 
         for caso in data:
             caso['_id'] = str(caso['_id'])
@@ -211,12 +218,21 @@ def relatorio_geral():
         else:
             filename = f'relatorio_geral_{timestamp}.xlsx'
         
-        return send_file(
-            excel_file,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            as_attachment=True,
-            download_name=filename
+        # Criar response com send_file
+        response = make_response(
+            send_file(
+                excel_file,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=filename
+            )
         )
+        
+        # Adicionar headers na response
+        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition'
+        
+        return response
         
     except Exception as e:
         return {"error": str(e)}, 500
