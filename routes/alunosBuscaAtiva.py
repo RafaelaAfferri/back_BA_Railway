@@ -4,6 +4,7 @@ from bson.objectid import ObjectId
 from config import alunos, casos
 import datetime
 import pytz
+import pandas as pd
 
 alunos_bp = Blueprint('alunos', __name__)
 
@@ -11,32 +12,88 @@ alunos_bp = Blueprint('alunos', __name__)
 @jwt_required()
 def registerAluno():
     try:
-        data = request.get_json()
-        if alunos.find_one({"RA": data["RA"]}):
-            return {"error": "Este aluno já existe"}, 400
-        data["nome"] = data["nome"].capitalize()
-        data["turma"] = str(data["turma"][0]) + data["turma"][1].upper()
-        data["dataNascimento"] = data["dataNascimento"]
-        data["tarefas"] = []
-        alunos.insert_one(data)
-        caso = {}
-        caso["ligacoes"] = []
-        caso["visitas"] = []
-        caso["atendimentos"] = []
-        caso["aluno"] = data
-        caso["status"] = "EM ABERTO"
-        caso["faltas"] = int(data["faltas"])
-        if caso["faltas"] > 20:
-            caso["urgencia"] = "MEDIA"
-        elif caso["faltas"] > 40:
-            caso["urgencia"] = "ALTA"
-        else: 
-            caso["urgencia"] = "BAIXA"
-        #cadastrar na base de dados
-        casos.insert_one(caso)     
-        return {"message": "User registered successfully"}, 201
+        # data = request.get_json()
+        if 'file' not in request.files:
+            return {"error": "Nenhum arquivo foi enviado"}, 400
+        file = request.files['file']
+
+        df = pd.read_excel(file)
+
+        #endereço, telefone, telefone2, responsavel2, faltas
+
+        row = df.isin(["Turma"]).values.nonzero()[0][0]
+        col = df.isin(["Turma"]).values.nonzero()[1][0]
+
+        turma_info = df.iat[row, col + 1].split(" ")[1]
+
+        #Remova a primeira linha, pois ela já virou o cabeçalho
+        df_novo = df.iloc[3:].reset_index(drop=True)
+        df_novo.columns = df_novo.iloc[0]
+        df_novo = df_novo[1:].reset_index(drop=True)
+
+        nomes = df_novo["Nome do Aluno"].tolist()
+        ras = df_novo["Ra Prodesp"].tolist()
+        responsaveis1 = df_novo["Filiação 1"].tolist()
+
+        for i in range(len(nomes)):
+            if alunos.find_one({"RA": ras[i]}):
+                continue
+            data = {}
+            data["nome"] = nomes[i]
+            data["RA"] = ras[i]
+            data["turma"] = turma_info
+            data["dataNascimento"] = ''
+            data["tarefas"] = []
+            data["endereco"] = ''
+            data["telefone"] = ''
+            data["telefone2"] = ''
+            data["responsavel"] = responsaveis1[i]
+            data["responsavel2"] = ''
+            data["faltas"] = 0
+            alunos.insert_one(data)
+            caso = {}
+            caso["ligacoes"] = []
+            caso["visitas"] = []
+            caso["atendimentos"] = []
+            caso["aluno"] = data
+            caso["status"] = "EM ABERTO"
+            caso["faltas"] = int(data["faltas"])
+            caso["urgencia"] = "INDEFINIDA"
+            casos.insert_one(caso)
+        return {"message": "Alunos registrados com sucesso"}, 201
     except Exception as e:
         return {"error": str(e)}, 500
+
+# @alunos_bp.route('/alunoBuscaAtiva', methods=['POST'])
+# @jwt_required()
+# def registerAluno():
+#     try:
+#         data = request.get_json()
+#         if alunos.find_one({"RA": data["RA"]}):
+#             return {"error": "Este aluno já existe"}, 400
+#         data["nome"] = data["nome"].capitalize()
+#         data["turma"] = str(data["turma"][0]) + data["turma"][1].upper()
+#         data["dataNascimento"] = data["dataNascimento"]
+#         data["tarefas"] = []
+#         alunos.insert_one(data)
+#         caso = {}
+#         caso["ligacoes"] = []
+#         caso["visitas"] = []
+#         caso["atendimentos"] = []
+#         caso["aluno"] = data
+#         caso["status"] = "EM ABERTO"
+#         caso["faltas"] = int(data["faltas"])
+#         if caso["faltas"] > 20:
+#             caso["urgencia"] = "MEDIA"
+#         elif caso["faltas"] > 40:
+#             caso["urgencia"] = "ALTA"
+#         else: 
+#             caso["urgencia"] = "BAIXA"
+#         #cadastrar na base de dados
+#         casos.insert_one(caso)     
+#         return {"message": "User registered successfully"}, 201
+#     except Exception as e:
+#         return {"error": str(e)}, 500
 
 @alunos_bp.route('/alunoBuscaAtiva/<aluno_id>', methods=['PUT'])
 @jwt_required()
@@ -62,6 +119,17 @@ def updateAluno(aluno_id):
             aluno["responsavel"] = data["responsavel"]
         if data["responsavel2"] != aluno["responsavel2"]:
             aluno["responsavel2"] = data["responsavel2"]
+        if data["faltas"] != aluno["faltas"]:
+            aluno["faltas"] = data["faltas"]
+            caso = casos.find_one({"aluno._id": ObjectId(aluno_id)})
+            caso["faltas"] = int(data["faltas"])
+            if caso["faltas"] > 20:
+                caso["urgencia"] = "MEDIA"
+            elif caso["faltas"] > 40:
+                caso["urgencia"] = "ALTA"
+            else: 
+                caso["urgencia"] = "BAIXA"
+            casos.update_one({"aluno._id": ObjectId(aluno_id)}, {"$set": caso})
         alunos.update_one({"_id": ObjectId(aluno_id)}, {"$set": aluno})
         return jsonify({"message": "User updated successfully"}), 200
     except Exception as e:
