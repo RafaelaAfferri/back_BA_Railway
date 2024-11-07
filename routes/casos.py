@@ -3,40 +3,61 @@ from flask_jwt_extended import jwt_required
 from bson.objectid import ObjectId
 from config import casos, alunos
 import datetime
-from utils import generate_pdf
+from utils import generate_pdf, create_excel_report_with_charts
 import os
 import io
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font
+from openpyxl.chart import BarChart, Reference
+from openpyxl.chart.layout import Layout, ManualLayout
+from openpyxl.chart.label import DataLabelList
+from openpyxl.chart.text import RichText 
+import xlsxwriter
+
 
 casos_bp = Blueprint('casos', __name__)
 
-# @casos_bp.route('/casos', methods=['POST'])
-# @jwt_required()
-# def register_caso():
-#     try:
-#         data = request.get_json()
-#         aluno = alunos.find_one({"_id": ObjectId(data["aluno"])})
-#         data["urgencia"] = data["urgencia"].upper()
-#         data["status"] = data["status"].upper()
-#         if not aluno:
-#             return {"error": "Aluno não encontrado"}, 400
-#         if data["ligacao"]:
-#             data["ligacoes"] = [{"abae":data["abae"], "data":data["data"], "telefone":data["telefone"], "observacao":data["observacao"]}]
-#         data["aluno"] = aluno
-#         #cadastrar na base de dados
-#         casos.insert_one(data)     
-#         return {"message": "Caso registrado com sucesso"}, 201
-#     except Exception as e:
-#         return {"error": str(e)}, 500
 
-#opacao de filtro por alunos
 @casos_bp.route('/casos', methods=['GET'])
-@jwt_required()
 def get_casos():
     try:
         id_aluno = request.args.get('aluno_id')
         status = request.args.get('status')
+        ano = request.args.get('ano')
+        turma = request.args.get('turma')
+
+
+        if turma or ano:
+            query = {}
+
+            if turma:
+                if len(turma) == 1:
+                    query["aluno.turma"] = {"$regex": f"^{turma}"}
+                else:
+                    query["aluno.turma"] = turma
+            
+            data = list(casos.find(query))
+            for caso in data:
+                caso['_id'] = str(caso['_id'])
+                caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
+
+            if ano:
+                # Filtrar os eventos no ano especificado
+                filtered_data = []
+                for caso in data:
+                    # Filtrar visitas, ligacoes e atendimentos para o ano especificado
+                    caso["visitas"] = [visita for visita in caso["visitas"] if visita["data"][:4] == ano]
+                    caso["ligacoes"] = [ligacao for ligacao in caso["ligacoes"] if ligacao["data"][:4] == ano]
+                    caso["atendimentos"] = [atendimento for atendimento in caso["atendimentos"] if atendimento["data"][:4] == ano]
+
+                    # Adicionar caso somente se houver visitas, ligações ou atendimentos no ano
+                    if caso["visitas"] or caso["ligacoes"] or caso["atendimentos"]:
+                        filtered_data.append(caso)
+
+                return jsonify({"caso": filtered_data}), 200
+
+            return jsonify({"caso": data}), 200
+
         if id_aluno and status:
             data = list(casos.find({"aluno._id": ObjectId(id_aluno), "status": status}))
             for caso in data:
@@ -95,7 +116,8 @@ def update_caso(id):
         return jsonify({"mensagem": "Caso atualizado com sucesso!"}), 200
     except Exception as e:
         return {"erro":str(e)}, 500
-   
+
+
 
 @casos_bp.route('/casos/relatorio-geral', methods=['GET'])
 @jwt_required()
@@ -103,21 +125,20 @@ def relatorio_geral():
     try:
         turma = request.args.get('turma')
         ano = request.args.get('ano')
-        n_visita =0
+        n_visita = 0
         n_ligacao = 0
         n_atendimento = 0
+        n_status = {}
+        n_urgen = {}
         query = {}
-        print("oi")
-        print(turma)
-
         if turma:
-            if len(turma) == 1:  # Se a turma for apenas o número, buscar todas que começam com esse número
-                query["aluno.turma"] = {"$regex": f"^{turma}"}  # Regex para buscar turmas que começam com 'turma'
-            else:  # Caso contrário, buscar exatamente pela turma
+            if len(turma) == 1:
+                query["aluno.turma"] = {"$regex": f"^{turma}"}
+            else:
                 query["aluno.turma"] = turma
         
         data = list(casos.find(query))
-
+        
         for caso in data:
             caso['_id'] = str(caso['_id'])
             caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
@@ -125,7 +146,6 @@ def relatorio_geral():
         if ano:
             for caso in data:
                 for visita in caso["visitas"]:
-                    #fatia visita, comeca no ano
                     if visita["data"][:4] == ano:
                         n_visita += 1
                 caso["n_visita"] = n_visita
@@ -137,24 +157,36 @@ def relatorio_geral():
                     if atendimento["data"][:4] == ano:
                         n_atendimento += 1
                 caso["n_atendimento"] = n_atendimento
-        
+                if caso["status"] in n_status:
+                    n_status[caso["status"]] += 1
+                else:
+                    n_status[caso["status"]] = 1
+
+                if caso["urgencia"] in n_urgen:
+                    n_urgen[caso["urgencia"]] += 1
+                else:
+                    n_urgen[caso["urgencia"]] = 1
         else:
             for caso in data:
                 caso["n_visita"] = len(caso["visitas"])
                 caso["n_ligacao"] = len(caso["ligacoes"])
                 caso["n_atendimento"] = len(caso["atendimentos"])
+                if caso["status"] in n_status:
+                    n_status[caso["status"]] += 1
+                else:
+                    n_status[caso["status"]] = 1
+
+                if caso["urgencia"] in n_urgen:
+                    n_urgen[caso["urgencia"]] += 1
+                else:
+                    n_urgen[caso["urgencia"]] = 1
+                
+                
         
-        # Create Excel workbook
-        wb = Workbook()
-        ws = wb.active
-        if turma and ano:
-            ws.title = f"Relatório_Geral{turma}_{ano}"
-        elif turma:
-            ws.title = f"Relatório_Geral{turma}"
-        elif ano:
-            ws.title = f"Relatório_Geral{ano}"
-        else:
-            ws.title = "Relatório_Geral"
+        # Create Excel workbook in memory
+        output = io.BytesIO()
+        workbook = xlsxwriter.Workbook(output)
+        worksheet = workbook.add_worksheet("Relatório_Geral")
         
         # Define headers
         headers = [
@@ -167,45 +199,266 @@ def relatorio_geral():
             "Urgência do Caso",
             "Faltas"
         ]
-        
-        # Style for headers
-        header_fill = PatternFill(start_color="CCE5FF", end_color="CCE5FF", fill_type="solid")
-        header_font = Font(bold=True)
-        
-        # Write headers
-        for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col, value=header)
-            cell.fill = header_fill
-            cell.font = header_font
-        
-        # Write data
-        for row, caso in enumerate(data, 2):
-            ws.cell(row=row, column=1, value=caso["aluno"]["nome"])
-            ws.cell(row=row, column=2, value=caso["aluno"]["turma"])
-            ws.cell(row=row, column=3, value=caso["n_visita"])
-            ws.cell(row=row, column=4, value=caso["n_ligacao"])
-            ws.cell(row=row, column=5, value=caso["n_atendimento"])
-            ws.cell(row=row, column=6, value=caso["status"])
-            ws.cell(row=row, column=7, value=caso["urgencia"])
-            ws.cell(row=row, column=8, value=caso["faltas"])
-        
+
+        # Write headers with formatting
+        header_format = workbook.add_format({'bold': True, 'bg_color': '#CCE5FF'})
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, header_format)
+
+        # Write data to cells
+        for row, caso in enumerate(data, 1):
+            worksheet.write(row, 0, caso["aluno"]["nome"])
+            worksheet.write(row, 1, caso["aluno"]["turma"])
+            worksheet.write(row, 2, caso["n_visita"])
+            worksheet.write(row, 3, caso["n_ligacao"])
+            worksheet.write(row, 4, caso["n_atendimento"])
+            worksheet.write(row, 5, caso["status"])
+            worksheet.write(row, 6, caso["urgencia"])
+            worksheet.write(row, 7, caso["faltas"])
+
+        worksheet.conditional_format('C2:C{}'.format(len(data) + 1), {
+            'type': '3_color_scale',
+            'min_color': "#AAFFAA",  # Light green for high values
+            'mid_color': "#FFFFAA",  # Yellow for mid values
+            'max_color': "#FFAAAA"   # Light red for low values
+        })
+
+        worksheet.conditional_format('D2:D{}'.format(len(data) + 1), {
+            'type': '3_color_scale',
+            'min_color': "#AAFFAA",  # Light green for high values
+            'mid_color': "#FFFFAA",  # Yellow for mid values
+            'max_color': "#FFAAAA"   # Light red for low values
+        })
+
+        worksheet.conditional_format('E2:E{}'.format(len(data) + 1), {
+            'type': '3_color_scale',
+            'min_color': "#AAFFAA",  # Light green for high values
+            'mid_color': "#FFFFAA",  # Yellow for mid values
+            'max_color': "#FFAAAA"   # Light red for low values
+        })
+
+        # Apply conditional formatting to the "Número de Visitas" column (C2:C...)
+        worksheet.conditional_format('H2:H{}'.format(len(data) + 1), {
+            'type': '3_color_scale',
+            'min_color': "#AAFFAA",  # Light green for high values
+            'mid_color': "#FFFFAA",  # Yellow for mid values
+            'max_color': "#FFAAAA"   # Light red for low values
+        })
         # Adjust column widths
-        for col in ws.columns:
-            max_length = 0
-            column = col[0].column_letter
-            for cell in col:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = (max_length + 2)
-            ws.column_dimensions[column].width = adjusted_width
+        worksheet.set_column('A:A', 20)  # Nome do Aluno
+        worksheet.set_column('B:B', 10)  # Turma
+        worksheet.set_column('C:C', 18)  # Número de Visitas
+        worksheet.set_column('D:D', 20)  # Número de Ligações
+        worksheet.set_column('E:E', 22)  # Número de Atendimentos
+        worksheet.set_column('F:F', 18)  # Status do Caso
+        worksheet.set_column('G:G', 18)  # Urgência do Caso
+        worksheet.set_column('H:H', 10)  # Faltas
+
+
+
+#------------------------ Gráficos ------------------------
+        # Create a new worksheet for charts
+        graficos_alunos = workbook.add_worksheet("Gráficos Alunos")
+        graficos_turma = workbook.add_worksheet("Gráficos Turma")
+        grafico_s_u = workbook.add_worksheet("Gráfico Status e Urgência")
+
         
-        # Save to memory buffer
-        excel_file = io.BytesIO()
-        wb.save(excel_file)
-        excel_file.seek(0)
+
+#------------------------ ALUNOS X VISITAS  ------------------------
+        # Create a bar chart for Alunos x Visitas
+        chart_visita = workbook.add_chart({'type': 'column'})
+        # Data for chart_visita
+        chart_visita.add_series({
+            'name': 'Número de Visitas',
+            'categories': f'=Relatório_Geral!$A$2:$A${len(data) + 1}',
+            'values': f'=Relatório_Geral!$C$2:$C${len(data) + 1}'
+        })
+        chart_visita.set_title({'name': 'Alunos x Visitas'})
+        chart_visita.set_x_axis({'name': 'Alunos'})
+        chart_visita.set_y_axis({'name': 'Número de Visitas', 'major_unit': 1})
+        
+        
+        
+        chart_visita.set_size({'height': 300})
+        
+        chart_visita.set_legend({'position': 'none'})
+
+        # Insert chart into chart worksheet
+        graficos_alunos.insert_chart('A1', chart_visita)
+
+#------------------------ ALUNOS X LIGAÇÕES  ------------------------
+        # Create a bar chart for Alunos x Ligações
+        chart_lig = workbook.add_chart({'type': 'column'})
+        # Data for chart_lig
+        chart_lig.add_series({
+            'name': 'Número de Ligações',
+            'categories': f'=Relatório_Geral!$A$2:$A${len(data) + 1}',
+            'values': f'=Relatório_Geral!$D$2:$D${len(data) + 1}'
+        })
+        chart_lig.set_title({'name': 'Alunos x Ligações'})
+        chart_lig.set_x_axis({'name': 'Alunos'})
+        chart_lig.set_y_axis({'name': 'Número de Ligações', 'major_unit': 1})
+        
+        chart_lig.set_legend({'position': 'none'})
+
+        chart_lig.set_size({'height': 300})
+        
+        # Insert chart into chart worksheet
+        graficos_alunos.insert_chart('A20', chart_lig)
+
+
+#------------------------ ALUNOS X ATENDIMENTOS  ------------------------
+
+        # Create a bar chart for Alunos x Atendimentos
+        chart_atend = workbook.add_chart({'type': 'column'})
+        # Data for chart_atend
+        chart_atend.add_series({
+            'name': 'Número de Atendimentos',
+            'categories': f'=Relatório_Geral!$A$2:$A${len(data) + 1}',
+            'values': f'=Relatório_Geral!$E$2:$E${len(data) + 1}'
+        })
+        chart_atend.set_title({'name': 'Alunos x Atendimentos'})
+        chart_atend.set_x_axis({'name': 'Alunos'})
+        chart_atend.set_y_axis({'name': 'Número de Atendimentos', 'major_unit': 1})
+
+        chart_atend.set_legend({'position': 'none'})
+
+        chart_atend.set_size({'height': 300})
+
+        # Insert chart into chart worksheet
+        graficos_alunos.insert_chart('A40', chart_atend)
+
+
+#------------------------ GRAFICO TURMA X LIG X VIS X ATEND------------------------
+
+        # Create a bar chart for Turma x Lig x Vis x Atend
+        chart_turma = workbook.add_chart({'type': 'column'})
+        # Data for chart_turma
+        chart_turma.add_series({
+            'name': 'Número de Visitas',
+            'categories': f'=Relatório_Geral!$B$2:$B${len(data) + 1}',
+            'values': f'=Relatório_Geral!$C$2:$C${len(data) + 1}'
+        })
+        chart_turma.add_series({
+            'name': 'Número de Ligações',
+            'categories': f'=Relatório_Geral!$B$2:$B${len(data) + 1}',
+            'values': f'=Relatório_Geral!$D$2:$D${len(data) + 1}'
+        })
+        chart_turma.add_series({
+            'name': 'Número de Atendimentos',
+            'categories': f'=Relatório_Geral!$B$2:$B${len(data) + 1}',
+            'values': f'=Relatório_Geral!$E$2:$E${len(data) + 1}'
+        })    
+
+        
+
+        chart_turma.set_title({'name': 'Ligações, visitas, atendimentos por turma'})
+
+        chart_turma.set_x_axis({'name': 'Turma'})
+        chart_turma.set_y_axis({'name': 'Quantidade', 'major_unit': 1})                 
+
+        chart_turma.set_size({'height': 450})
+
+        graficos_turma.insert_chart('A1', chart_turma)
+
+
+#------------------------ GRAFICO FALTA X TURMA ------------------------
+        chart_turma_falta = workbook.add_chart({'type': 'column'})
+        # Data for chart_turma
+        chart_turma_falta.add_series({
+            'name': 'Faltas',
+            'categories': f'=Relatório_Geral!$B$2:$B${len(data) + 1}',
+            'values': f'=Relatório_Geral!$H$2:$H${len(data) + 1}'
+        })
+
+        chart_turma_falta.set_title({'name': 'Faltas por turma'})
+        chart_turma_falta.set_x_axis({'name': 'Turma'})
+        chart_turma_falta.set_y_axis({'name': 'Faltas', 'major_unit': 5, 'minor_unit': 1})
+        chart_turma_falta.set_legend({'position': 'none'})
+
+        chart_turma_falta.set_size({'height': 450})
+        
+        # Insert chart into chart worksheet
+        graficos_turma.insert_chart('A30', chart_turma_falta)
+
+
+#---------------------------------GRAFICO STATUS---------------------------------
+        hidden_sheet = workbook.add_worksheet('HiddenData')
+        hidden_sheet.hide()
+        # Write the data in the hidden sheet
+        row = 0
+        for key, value in n_status.items():
+            hidden_sheet.write(row, 0, key)  # Categories
+            hidden_sheet.write(row, 1, value)  # Values
+            row += 1
+
+        # Create the doughnut chart
+        chart_status = workbook.add_chart({'type': 'doughnut'})
+
+        # Define ranges referring to the hidden sheet
+        categories_range = f"HiddenData!$A$1:$A${len(n_status)}"
+        values_range = f"HiddenData!$B$1:$B${len(n_status)}"
+
+        # Now pass the ranges to the chart
+        chart_status.add_series({
+            'name': 'Status',
+            'categories': categories_range,
+            'values': values_range,
+            'points': [
+            {"fill": {"color": "#FBD542"}},
+            {"fill": {"color": "#007bff"}},
+            ],
+            
+            
+        })
+        chart_status.set_title({'name': 'Status dos casos'})
+        chart_status.set_size({'height': 300, 'width': 300})
+        chart_status.set_legend({'position': 'right'})
+        chart_status.set_rotation(90)
+
+        grafico_s_u.insert_chart('A1', chart_status)
+
+
+#---------------------------------GRAFICO URGÊNCIA---------------------------------
+        hidden_sheet = workbook.add_worksheet('HiddenData2')
+        hidden_sheet.hide()
+        # Write the data in the hidden sheet
+        row = 0
+        for key, value in n_urgen.items():
+            hidden_sheet.write(row, 0, key)
+            hidden_sheet.write(row, 1, value)
+            row += 1
+            
+        # Create the doughnut chart
+        chart_urgencia = workbook.add_chart({'type': 'doughnut'})
+
+        # Define ranges referring to the hidden sheet
+        categories_range = f"HiddenData2!$A$1:$A${len(n_urgen)}"
+        values_range = f"HiddenData2!$B$1:$B${len(n_urgen)}"
+
+        # Now pass the ranges to the chart
+        chart_urgencia.add_series({
+            'name': 'Urgência',
+            'categories': categories_range,
+            'values': values_range,
+            'points': [
+            {"fill": {"color": "#007bff"}},
+            {"fill": {"color": "#008000"}},
+            {"fill": {"color": "#FBD542"}},
+            {"fill": {"color": "#05263E"}},
+            ],
+        })
+        chart_urgencia.set_title({'name': 'Urgência dos casos'})
+        chart_urgencia.set_size({'height': 300, 'width': 300})
+        chart_urgencia.set_legend({'position': 'right'})
+        chart_urgencia.set_rotation(135)
+
+        grafico_s_u.insert_chart('F1', chart_urgencia)
+
+
+        # Close workbook and prepare response
+        workbook.close()
+        output.seek(0)
         
         # Generate filename with timestamp
         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -217,25 +470,194 @@ def relatorio_geral():
             filename = f'relatorio_geral_{ano}_{timestamp}.xlsx'
         else:
             filename = f'relatorio_geral_{timestamp}.xlsx'
-        
-        # Criar response com send_file
+
+        # Create response with send_file
         response = make_response(
             send_file(
-                excel_file,
+                output,
                 mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 as_attachment=True,
                 download_name=filename
             )
         )
-        
-        # Adicionar headers na response
+
+        # Add headers to response
         response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
         response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition'
-        
+
         return response
-        
+
     except Exception as e:
         return {"error": str(e)}, 500
+
+
+# @casos_bp.route('/casos/relatorio-geral', methods=['GET'])
+# # @jwt_required()
+# def relatorio_geral():
+#     try:
+#         turma = request.args.get('turma')
+#         ano = request.args.get('ano')
+#         n_visita =0
+#         n_ligacao = 0
+#         n_atendimento = 0
+#         query = {}
+#         if turma:
+#             if len(turma) == 1:  # Se a turma for apenas o número, buscar todas que começam com esse número
+#                 query["aluno.turma"] = {"$regex": f"^{turma}"}  # Regex para buscar turmas que começam com 'turma'
+#             else:  # Caso contrário, buscar exatamente pela turma
+#                 query["aluno.turma"] = turma
+        
+#         data = list(casos.find(query))
+
+#         for caso in data:
+#             caso['_id'] = str(caso['_id'])
+#             caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
+
+#         if ano:
+#             for caso in data:
+#                 for visita in caso["visitas"]:
+#                     #fatia visita, comeca no ano
+#                     if visita["data"][:4] == ano:
+#                         n_visita += 1
+#                 caso["n_visita"] = n_visita
+#                 for ligacao in caso["ligacoes"]:
+#                     if ligacao["data"][:4] == ano:
+#                         n_ligacao += 1
+#                 caso["n_ligacao"] = n_ligacao
+#                 for atendimento in caso["atendimentos"]:
+#                     if atendimento["data"][:4] == ano:
+#                         n_atendimento += 1
+#                 caso["n_atendimento"] = n_atendimento
+        
+#         else:
+#             for caso in data:
+#                 caso["n_visita"] = len(caso["visitas"])
+#                 caso["n_ligacao"] = len(caso["ligacoes"])
+#                 caso["n_atendimento"] = len(caso["atendimentos"])
+        
+#         # Create Excel workbook
+#         wb = Workbook()
+#         ws = wb.active
+#         if turma and ano:
+#             ws.title = f"Relatório_Geral_{turma}_{ano}"
+#         elif turma:
+#             ws.title = f"Relatório_Geral_{turma}"
+#         elif ano:
+#             ws.title = f"Relatório_Geral_{ano}"
+#         else:
+#             ws.title = "Relatório_Geral"
+        
+#         # Define headers
+#         headers = [
+#             "Nome do Aluno",
+#             "Turma",
+#             "Número de Visitas",
+#             "Número de Ligações",
+#             "Número de Atendimentos",
+#             "Status do Caso",
+#             "Urgência do Caso",
+#             "Faltas"
+#         ]
+        
+#         # Style for headers
+#         header_fill = PatternFill(start_color="CCE5FF", end_color="CCE5FF", fill_type="solid")
+#         header_font = Font(bold=True)
+        
+#         # Write headers
+#         for col, header in enumerate(headers, 1):
+#             cell = ws.cell(row=1, column=col, value=header)
+#             cell.fill = header_fill
+#             cell.font = header_font
+        
+#         # Write data
+#         for row, caso in enumerate(data, 2):
+#             ws.cell(row=row, column=1, value=caso["aluno"]["nome"])
+#             ws.cell(row=row, column=2, value=caso["aluno"]["turma"])
+#             ws.cell(row=row, column=3, value=caso["n_visita"])
+#             ws.cell(row=row, column=4, value=caso["n_ligacao"])
+#             ws.cell(row=row, column=5, value=caso["n_atendimento"])
+#             ws.cell(row=row, column=6, value=caso["status"])
+#             ws.cell(row=row, column=7, value=caso["urgencia"])
+#             ws.cell(row=row, column=8, value=caso["faltas"])
+        
+#         # Adjust column widths
+#         for col in ws.columns:
+#             max_length = 0
+#             column = col[0].column_letter
+#             for cell in col:
+#                 try:
+#                     if len(str(cell.value)) > max_length:
+#                         max_length = len(str(cell.value))
+#                 except:
+#                     pass
+#             adjusted_width = (max_length + 2)
+#             ws.column_dimensions[column].width = adjusted_width
+
+
+#         chart_worksheet = wb.create_sheet("Gráficos")
+#         # Crie o gráfico de barras para alunos x visitas
+#         visitas_chart = BarChart()
+#         visitas_chart.type = "col"
+#         visitas_chart.style = 10
+#         visitas_chart.title = "Alunos x Visitas"
+#         visitas_chart.x_axis.title = "Alunos"
+#         visitas_chart.y_axis.title = "Número de Visitas"    
+
+#         nomes_alunos = [caso["aluno"]["nome"] for caso in data]
+        
+#         visitas_values = Reference(ws, min_row=2, min_col=3, max_row=len(nomes_alunos)+1, max_col=3)
+#         visitas_chart.add_data(visitas_values, titles_from_data=False)
+
+#         alunos_values = Reference(ws, min_row=2, min_col=1, max_row=len(nomes_alunos)+1, max_col=1)
+#         visitas_chart.set_categories(alunos_values)
+#         data_labels = DataLabelList()
+#         data_labels.showVal = False
+#         data_labels.showSerName = False
+#         data_labels.showCatName = True
+#         data_labels.showLegendKey = False
+#         data_labels.dLblPos = "outEnd"
+        
+#         visitas_chart.dataLabels = data_labels
+
+        
+
+
+#         chart_worksheet.add_chart(visitas_chart, "A1")
+        
+#         # Save to memory buffer
+#         excel_file = io.BytesIO()
+#         wb.save(excel_file)
+#         excel_file.seek(0)
+        
+#         # Generate filename with timestamp
+#         timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+#         if turma and ano:
+#             filename = f'relatorio_geral_{turma}_{ano}_{timestamp}.xlsx'
+#         elif turma:
+#             filename = f'relatorio_geral_{turma}_{timestamp}.xlsx'
+#         elif ano:
+#             filename = f'relatorio_geral_{ano}_{timestamp}.xlsx'
+#         else:
+#             filename = f'relatorio_geral_{timestamp}.xlsx'
+        
+#         # Criar response com send_file
+#         response = make_response(
+#             send_file(
+#                 excel_file,
+#                 mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+#                 as_attachment=True,
+#                 download_name=filename
+#             )
+#         )
+        
+#         # Adicionar headers na response
+#         response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+#         response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition'
+        
+#         return response
+        
+#     except Exception as e:
+#         return {"error": str(e)}, 500
 
 @casos_bp.route('/casos/gerar-relatorio', methods=['POST'])
 @jwt_required()

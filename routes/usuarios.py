@@ -25,15 +25,15 @@ def register():
         data = request.get_json()
         encrypted_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
         user = {
-            "email": data["email"],
+            "nomeusuario": data["nomeusuario"],
             "password": encrypted_password,
             "permissao": data["permissao"].upper(),
             "nome": data["nome"].capitalize()
         }
-        if accounts.find_one({"email": data["email"]}):
-            return {"error": "Email already registered"}, 400
+        if accounts.find_one({"nomeusuario": data["nomeusuario"]}):
+            return {"error": "Nome de ususario já existe"}, 400
         accounts.insert_one(user)
-        return {"message": "User registered successfully"}, 201
+        return {"message": "Usuário resgistrado com sucesso"}, 201
     except Exception as e:
         return {"error": str(e)}, 500
 
@@ -44,9 +44,9 @@ def delete_user(user_id):
         user = accounts.find_one({"_id": ObjectId(user_id)})
         if user:
             accounts.delete_one({"_id": ObjectId(user_id)})
-            return {"message": "User deleted successfully"}, 200
+            return {"message": "Usuário deletado com sucesso"}, 200
         else:
-            return {"error": "User not found"}, 404
+            return {"error": "Usuario não encontrado"}, 404
     except Exception as e:
         return {"error": str(e)}, 500
 
@@ -68,10 +68,10 @@ def updateUser(user_id):
     try:
         data = request.get_json()
         user = accounts.find_one({"_id": ObjectId(user_id)})
-        if data["email"] != user["email"] and accounts.find_one({"email": data["email"]}):
-            return {"error": "Email already registered"}, 400
-        if data["email"] != user["email"]:
-            user["email"] = data["email"]
+        if data["nomeusuario"] != user["nomeusuario"] and accounts.find_one({"nomeusuario": data["nomeusuario"]}):
+            return {"error": "Nome de usuario ja existe"}, 400
+        if data["nomeusuario"] != user["nomeusuario"]:
+            user["nomeusuario"] = data["nomeusuario"]
         if data["nome"] != user["nome"]:
             user["nome"] = data["nome"]
         if data["permissao"] != user["permissao"]:
@@ -91,8 +91,8 @@ def getUsuarios():
         data = request.get_json()
         token = data["token"]
         user_token = tokens.find_one({'token': token})
-        email = user_token["email"]
-        user = accounts.find_one({"email": email})
+        nomeusuario = user_token["nomeusuario"]
+        user = accounts.find_one({"nomeusuario": nomeusuario})
         permissao = user["permissao"]
         return jsonify({"permissao": permissao}), 200
     except Exception as e:
@@ -108,8 +108,8 @@ def getUsuarios():
 #         data = request.get_json()
 #         token = data["token"]
 #         user_token = tokens.find_one({'token': token})
-#         email = user_token["email"]
-#         user = accounts.find_one({"email": email})
+#         nomeusuario = user_token["nomeusuario"]
+#         user = accounts.find_one({"nomeusuario": nomeusuario})
 #         user["_id"] = str(user["_id"])
 #         return jsonify(user), 200
 #     except Exception as e:
@@ -124,8 +124,8 @@ def getDadosUsuario():
         user_token = tokens.find_one({'token': token})
         if not user_token:
             raise ValueError("Token inválido ou não encontrado", token)
-        email = user_token["email"]
-        user = accounts.find_one({"email": email})
+        nomeusuario = user_token["nomeusuario"]
+        user = accounts.find_one({"nomeusuario": nomeusuario})
         if not user:
             raise ValueError("Usuário não encontrado")
         user["_id"] = str(user["_id"])

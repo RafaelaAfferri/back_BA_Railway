@@ -24,7 +24,7 @@ def registerAluno():
         row = df.isin(["Turma"]).values.nonzero()[0][0]
         col = df.isin(["Turma"]).values.nonzero()[1][0]
 
-        turma_info = df.iat[row, col + 1].split(" ")[1]
+        turma_info = df.iat[row, col + 1].split(" ")[2]
 
         #Remova a primeira linha, pois ela já virou o cabeçalho
         df_novo = df.iloc[3:].reset_index(drop=True)
@@ -37,6 +37,11 @@ def registerAluno():
 
         for i in range(len(nomes)):
             if alunos.find_one({"RA": ras[i]}):
+                data =  alunos.find_one({"RA": ras[i]})
+                data["nome"] = nomes[i]
+                data["turma"] = turma_info
+                data["responsavel"] = responsaveis1[i]
+                alunos.update_one({"RA": ras[i]}, {"$set": data})
                 continue
             data = {}
             data["nome"] = nomes[i]
