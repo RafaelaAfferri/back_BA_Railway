@@ -23,8 +23,8 @@ COPY . /app
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Definir a variável de ambiente para permitir que o Gunicorn ouça em todos os IPs
-ENV PORT 8080
-ENV HOST 0.0.0.0
+ENV PORT=8080
+ENV HOST=0.0.0.0
 
 # Expor a porta para o Railway
 EXPOSE 8080

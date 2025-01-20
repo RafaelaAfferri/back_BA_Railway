@@ -17,88 +17,121 @@ def registerAluno():
             return {"error": "Nenhum arquivo foi enviado"}, 400
         file = request.files['file']
 
-        df = pd.read_excel(file)
+        excel_file = pd.ExcelFile(file)
+        sheet_names = excel_file.sheet_names
+        dict_turmas = {}
+        for sheet in sheet_names:
+            
+            df = pd.read_excel(file, sheet_name=sheet)
+            #endereço, telefone, telefone2, responsavel2, faltas
+            row = df.isin(["Turma"]).values.nonzero()[0][0]
+            col = df.isin(["Turma"]).values.nonzero()[1][0]
 
-        #endereço, telefone, telefone2, responsavel2, faltas
+            turma_info=df.iat[row, col + 1].split(" ")[2]
 
-        row = df.isin(["Turma"]).values.nonzero()[0][0]
-        col = df.isin(["Turma"]).values.nonzero()[1][0]
+            dict_turmas[turma_info]=df
 
-        turma_info = df.iat[row, col + 1].split(" ")[2]
+        dict_turmas_sorted = dict(sorted(dict_turmas.items(), reverse=True))
 
-        #Remova a primeira linha, pois ela já virou o cabeçalho
-        df_novo = df.iloc[3:].reset_index(drop=True)
-        df_novo.columns = df_novo.iloc[0]
-        df_novo = df_novo[1:].reset_index(drop=True)
+        # Agrupamento de turmas
+        dfs_agrupados = {}
+        for turma, df in dict_turmas_sorted.items():
+            df_novo = df.iloc[3:].reset_index(drop=True)
+            df_novo.columns = df_novo.iloc[0]
+            df_novo = df_novo[1:].reset_index(drop=True)
 
-        nomes = df_novo["Nome do Aluno"].tolist()
-        ras = df_novo["Ra Prodesp"].tolist()
-        responsaveis1 = df_novo["Filiação 1"].tolist()
+            numero_turma = turma[0]  # Pega o primeiro caractere da turma
+            if numero_turma not in dfs_agrupados:
+                dfs_agrupados[numero_turma] = []
+            # Adiciona uma coluna indicando a turma original
+            df_novo['turma'] = turma
+            dfs_agrupados[numero_turma].append(df_novo)
+        dfs_finais = {}
+        for numero, lista_dfs in dfs_agrupados.items():
+            dfs_finais[numero] = pd.concat(lista_dfs, ignore_index=True)
+        for key in dfs_finais:
+            df = dfs_finais[key]
+            #Remova a primeira linha, pois ela já virou o cabeçalho
+            # df_novo = df.iloc[3:].reset_index(drop=True)
+            # df_novo.columns = df_novo.iloc[0]
+            # df_novo = df_novo[1:].reset_index(drop=True)
 
-        for i in range(len(nomes)):
-            if alunos.find_one({"RA": ras[i]}):
-                data =  alunos.find_one({"RA": ras[i]})
+            nomes = df["Nome do Aluno"].tolist()
+            ras = df["Ra Prodesp"].tolist()
+            responsaveis1 = df["Filiação 1"].tolist()
+            turmas = df["turma"].tolist()
+            tegs = df["Utiliz. T.E.G."].tolist()
+            
+            alunos_list = alunos.find({"turma": { "$regex": f"^{key}", "$options": "i" }})
+            #deleta alunos que não existem mais
+            
+            for aluno in alunos_list:
+                if aluno["nome"] not in nomes:
+                    casos.delete_one({"aluno._id": ObjectId(aluno["_id"])})
+                    alunos.delete_one({"_id": ObjectId(aluno["_id"])})
+
+            for i in range(len(nomes)):
+                if alunos.find_one({"RA": ras[i]}):
+                    data =  alunos.find_one({"RA": ras[i]})
+                    data["nome"] = nomes[i]
+                    data["turma"] = turmas[i]
+                    data["responsavel"] = responsaveis1[i]
+                    data['faltas'] = 0
+                    data['Utiliz. T.E.G.'] = tegs[i]
+                    alunos.update_one({"RA": ras[i]}, {"$set": data})
+                    continue
+                data = {}
                 data["nome"] = nomes[i]
-                data["turma"] = turma_info
+                data["RA"] = ras[i]
+                data["turma"] = turmas[i]
+                data["dataNascimento"] = ''
+                data["tarefas"] = []
+                data["endereco"] = ''
+                data["telefone"] = ''
+                data["telefone2"] = ''
                 data["responsavel"] = responsaveis1[i]
-                alunos.update_one({"RA": ras[i]}, {"$set": data})
-                continue
-            data = {}
-            data["nome"] = nomes[i]
-            data["RA"] = ras[i]
-            data["turma"] = turma_info
-            data["dataNascimento"] = ''
-            data["tarefas"] = []
-            data["endereco"] = ''
-            data["telefone"] = ''
-            data["telefone2"] = ''
-            data["responsavel"] = responsaveis1[i]
-            data["responsavel2"] = ''
-            data["faltas"] = 0
-            alunos.insert_one(data)
-            caso = {}
-            caso["ligacoes"] = []
-            caso["visitas"] = []
-            caso["atendimentos"] = []
-            caso["aluno"] = data
-            caso["status"] = "EM ABERTO"
-            caso["faltas"] = int(data["faltas"])
-            caso["urgencia"] = "INDEFINIDA"
-            casos.insert_one(caso)
+                data["responsavel2"] = ''
+                data["faltas"] = 0
+                data["Utiliz. T.E.G."] = tegs[i]
+                alunos.insert_one(data)
+                caso = {}
+                caso["ligacoes"] = []
+                caso["visitas"] = []
+                caso["atendimentos"] = []
+                caso["aluno"] = data
+                caso["status"] = "FINALIZADO"
+                caso["faltas"] = int(data["faltas"])
+                caso["urgencia"] = "INDEFINIDA"
+                casos.insert_one(caso)
         return {"message": "Alunos registrados com sucesso"}, 201
     except Exception as e:
         return {"error": str(e)}, 500
 
-# @alunos_bp.route('/alunoBuscaAtiva', methods=['POST'])
-# @jwt_required()
-# def registerAluno():
-#     try:
-#         data = request.get_json()
-#         if alunos.find_one({"RA": data["RA"]}):
-#             return {"error": "Este aluno já existe"}, 400
-#         data["nome"] = data["nome"].capitalize()
-#         data["turma"] = str(data["turma"][0]) + data["turma"][1].upper()
-#         data["dataNascimento"] = data["dataNascimento"]
-#         data["tarefas"] = []
-#         alunos.insert_one(data)
-#         caso = {}
-#         caso["ligacoes"] = []
-#         caso["visitas"] = []
-#         caso["atendimentos"] = []
-#         caso["aluno"] = data
-#         caso["status"] = "EM ABERTO"
-#         caso["faltas"] = int(data["faltas"])
-#         if caso["faltas"] > 20:
-#             caso["urgencia"] = "MEDIA"
-#         elif caso["faltas"] > 40:
-#             caso["urgencia"] = "ALTA"
-#         else: 
-#             caso["urgencia"] = "BAIXA"
-#         #cadastrar na base de dados
-#         casos.insert_one(caso)     
-#         return {"message": "User registered successfully"}, 201
-#     except Exception as e:
-#         return {"error": str(e)}, 500
+@alunos_bp.route('/alunoBuscaAtivaOne', methods=['POST'])
+@jwt_required()
+def registerAlunoOne():
+    try:
+        data = request.get_json()
+        if alunos.find_one({"RA": data["RA"]}):
+            return {"error": "Este aluno já existe"}, 400
+        data["nome"] = data["nome"].capitalize()
+        data["turma"] = str(data["turma"][0]) + data["turma"][1].upper()
+        data["dataNascimento"] = data["dataNascimento"]
+        data["tarefas"] = []
+        alunos.insert_one(data)
+        caso = {}
+        caso["ligacoes"] = []
+        caso["visitas"] = []
+        caso["atendimentos"] = []
+        caso["aluno"] = data
+        caso["status"] = "FINALIZADO"
+        caso["faltas"] = int(data["faltas"])
+        caso["urgencia"] = "INDEFINIDA"
+        #cadastrar na base de dados
+        casos.insert_one(caso)     
+        return {"message": "Aluno cadastrado com sucesso"}, 201
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 @alunos_bp.route('/alunoBuscaAtiva/<aluno_id>', methods=['PUT'])
 @jwt_required()
@@ -223,7 +256,6 @@ def update_status(tarefas):
             if tarefa["status"] == "Finalizado":
                 tarefa["status"] = "Finalizado"
             elif prazo_final < datetime.datetime.now(pytz.UTC) and tarefa["status"] != "Finalizdo":
-                print(prazo_final)
                 tarefa["status"] = "Atrasada"
             elif tarefa["status"] == "Em andamento" and prazo_final > datetime.datetime.now(pytz.UTC):
                 tarefa["status"] = "Em andamento"   
