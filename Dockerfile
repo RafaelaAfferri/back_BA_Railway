@@ -26,8 +26,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 ENV PORT=8080
 ENV HOST=0.0.0.0
 
-# Expor a porta para o Railway
 EXPOSE 8080
 
 # Comando para rodar o Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:${PORT}", "app:app"]
