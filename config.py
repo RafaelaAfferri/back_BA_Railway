@@ -13,6 +13,9 @@ class CONFIG:
     JWT_ACCESS_TOKEN_EXPIRES = datetime.timedelta(days=10)
     MONGO_URI = load_dotenv("MONGO_URI")
 
+print(CONFIG.MONGO_URI)
+
+
 client_mongo = pymongo.MongoClient(CONFIG.MONGO_URI, tlsCAFile=certifi.where())
 accounts = client_mongo.buscaAtiva.accounts
 tokens = client_mongo.buscaAtiva.tokens
