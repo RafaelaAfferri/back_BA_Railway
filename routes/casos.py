@@ -27,6 +27,7 @@ def get_casos():
         turma = request.args.get('turma')
 
 
+
         if turma or ano:
             query = {}
 
