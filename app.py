@@ -18,7 +18,6 @@ app.config.from_object(CONFIG)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
-print("MONGO_URI:", CONFIG.MONGO_URI)
 client_mongo = pymongo.MongoClient(CONFIG.MONGO_URI, tlsCAFile=certifi.where())
 
 from routes.auth import auth_bp

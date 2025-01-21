@@ -11,7 +11,8 @@ class CONFIG:
     JWT_SECRET_KEY = 'busca-ativa-escolar'
     JWT_VERIFY_EXPIRATION = True
     JWT_ACCESS_TOKEN_EXPIRES = datetime.timedelta(days=10)
-    MONGO_URI = load_dotenv("MONGO_URI")
+    MONGO_URI = 'mongodb+srv://admin:admin@ba.auiky.mongodb.net/buscaAtiva?retryWrites=true&w=majority'
+
 
 print(CONFIG.MONGO_URI)
 
