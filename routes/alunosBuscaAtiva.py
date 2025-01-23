@@ -61,6 +61,7 @@ def registerAluno():
             responsaveis1 = df["Filiação 1"].tolist()
             turmas = df["turma"].tolist()
             tegs = df["Utiliz. T.E.G."].tolist()
+            print(tegs)
             
             alunos_list = alunos.find({"turma": { "$regex": f"^{key}", "$options": "i" }})
             #deleta alunos que não existem mais
@@ -77,7 +78,7 @@ def registerAluno():
                     data["turma"] = turmas[i]
                     data["responsavel"] = responsaveis1[i]
                     data['faltas'] = 0
-                    data['Utiliz. T.E.G.'] = tegs[i]
+                    data["Utiliz. T.E.G."] = tegs[i]
                     alunos.update_one({"RA": ras[i]}, {"$set": data})
                     continue
                 data = {}
@@ -106,6 +107,7 @@ def registerAluno():
         return {"message": "Alunos registrados com sucesso"}, 201
     except Exception as e:
         return {"error": str(e)}, 500
+
 
 @alunos_bp.route('/alunoBuscaAtivaOne', methods=['POST'])
 @jwt_required()
