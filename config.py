@@ -14,7 +14,6 @@ class CONFIG:
     MONGO_URI = 'mongodb+srv://coordenacaogonzaguinha:admin@baemef.vnnsw.mongodb.net/buscaAtiva?retryWrites=true&w=majority'
 
 
-print(CONFIG.MONGO_URI)
 
 
 client_mongo = pymongo.MongoClient(CONFIG.MONGO_URI, tlsCAFile=certifi.where())
