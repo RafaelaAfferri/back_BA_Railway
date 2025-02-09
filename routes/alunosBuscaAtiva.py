@@ -24,11 +24,21 @@ def registerAluno():
             
             df = pd.read_excel(file, sheet_name=sheet)
             #endereço, telefone, telefone2, responsavel2, faltas
-            row = df.isin(["Turma"]).values.nonzero()[0][0]
-            col = df.isin(["Turma"]).values.nonzero()[1][0]
+            posicoes = df.isin(["Turma"]).values.nonzero()
+            if len(posicoes[0]) == 0 or len(posicoes[1]) == 0:
+                return {"error": "Palavra 'Turma' não encontrada na planilha"}, 400
+            row = posicoes[0][0]
+            col = posicoes[1][0]
 
-            turma_info=df.iat[row, col + 1].split(" ")[2]
 
+            turma_val = df.iat[row, col + 1] if (col + 1) < df.shape[1] else ""
+            turma_info = turma_val.split(" ") if turma_val else []
+            if len(turma_info) < 3:
+                return {"error": "Formato inesperado na célula da turma"}, 400
+            turma_info = turma_info[2]
+
+            if turma_info in dict_turmas:
+                return {"error": f"Turma {turma_info} está duplicada na planilha"}, 400
             dict_turmas[turma_info]=df
 
         dict_turmas_sorted = dict(sorted(dict_turmas.items(), reverse=True))
@@ -49,20 +59,27 @@ def registerAluno():
         dfs_finais = {}
         for numero, lista_dfs in dfs_agrupados.items():
             dfs_finais[numero] = pd.concat(lista_dfs, ignore_index=True)
+        
+
+
         for key in dfs_finais:
             df = dfs_finais[key]
-            #Remova a primeira linha, pois ela já virou o cabeçalho
-            # df_novo = df.iloc[3:].reset_index(drop=True)
-            # df_novo.columns = df_novo.iloc[0]
-            # df_novo = df_novo[1:].reset_index(drop=True)
 
-            nomes = df["Nome do Aluno"].tolist()
-            ras = df["Ra Prodesp"].tolist()
-            responsaveis1 = df["Filiação 1"].tolist()
-            turmas = df["turma"].tolist()
-            tegs = df["Utiliz. T.E.G."].tolist()
-            print(tegs)
-            
+            required_columns = ["Nome do Aluno", "RA Prodesp", "Filiação 1", "turma", "Utiliz. T.E.G.", "Data Nascimento", "Situação Aluno"]
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                return {"error": f"Colunas ausentes na planilha: {', '.join(missing_columns)}"}, 400
+
+            nomes = df["Nome do Aluno"].fillna("Vazio").tolist()
+            ras = df["RA Prodesp"].fillna("Vazio").tolist()
+            responsaveis1 = df["Filiação 1"].fillna("").tolist()
+            turmas = df["turma"].fillna("Vazio").tolist()
+            tegs = df["Utiliz. T.E.G."].fillna("NÃO").tolist()
+            df["Data Nascimento"] = df["Data Nascimento"].fillna("").infer_objects(copy=False)
+            datas = df["Data Nascimento"].tolist()
+            situacoes = df["Situação Aluno"].tolist()
+
+                        
             alunos_list = alunos.find({"turma": { "$regex": f"^{key}", "$options": "i" }})
             #deleta alunos que não existem mais
             
@@ -72,20 +89,30 @@ def registerAluno():
                     alunos.delete_one({"_id": ObjectId(aluno["_id"])})
 
             for i in range(len(nomes)):
-                if alunos.find_one({"RA": ras[i]}):
+                if tegs[i] == "UTILIZANDO":
+                    tegs[i] = "SIM"
+                if situacoes[i] == "VÍNCULO INDEVIDO":
+                    continue
+                if alunos.find_one({"RA": ras[i]}) and ras[i] != "Vazio":
                     data =  alunos.find_one({"RA": ras[i]})
+                    
                     data["nome"] = nomes[i]
                     data["turma"] = turmas[i]
                     data["responsavel"] = responsaveis1[i]
                     data['faltas'] = 0
-                    data["Utiliz. T.E.G."] = tegs[i]
+                    data["utiliz_teg"] = tegs[i]
+                    data["dataNascimento"] = datas[i]
                     alunos.update_one({"RA": ras[i]}, {"$set": data})
                     continue
                 data = {}
+                if (ras[i]== "Vazio") or (nomes[i] == "Vazio") or (turmas[i] == "Vazio"):
+                    data["situacao"] = "INCOMPLETO"
+                else:
+                    data["situacao"] = "COMPLETO"
                 data["nome"] = nomes[i]
                 data["RA"] = ras[i]
                 data["turma"] = turmas[i]
-                data["dataNascimento"] = ''
+                data["dataNascimento"] = datas[i]
                 data["tarefas"] = []
                 data["endereco"] = ''
                 data["telefone"] = ''
@@ -93,7 +120,7 @@ def registerAluno():
                 data["responsavel"] = responsaveis1[i]
                 data["responsavel2"] = ''
                 data["faltas"] = 0
-                data["Utiliz. T.E.G."] = tegs[i]
+                data["utiliz_teg"] = tegs[i]
                 alunos.insert_one(data)
                 caso = {}
                 caso["ligacoes"] = []
@@ -106,6 +133,7 @@ def registerAluno():
                 casos.insert_one(caso)
         return {"message": "Alunos registrados com sucesso"}, 201
     except Exception as e:
+        print(str(e))
         return {"error": str(e)}, 500
 
 
@@ -147,6 +175,8 @@ def updateAluno(aluno_id):
             aluno["nome"] = data["nome"]
         if data["turma"] != aluno["turma"]:
             aluno["turma"] = data["turma"]
+        if data["RA"] != aluno["RA"]:
+            aluno["RA"] = data["RA"]
         if data["endereco"] != aluno["endereco"]:
             aluno["endereco"] = data["endereco"]
         if data["dataNascimento"] != aluno["dataNascimento"]:
@@ -159,6 +189,8 @@ def updateAluno(aluno_id):
             aluno["responsavel"] = data["responsavel"]
         if data["responsavel2"] != aluno["responsavel2"]:
             aluno["responsavel2"] = data["responsavel2"]
+        if data["utiliz_teg"] != aluno["utiliz_teg"]:
+            aluno["utiliz_teg"] = data["utiliz_teg"]
         if data["faltas"] != aluno["faltas"]:
             aluno["faltas"] = data["faltas"]
             caso = casos.find_one({"aluno._id": ObjectId(aluno_id)})
@@ -170,6 +202,10 @@ def updateAluno(aluno_id):
             else: 
                 caso["urgencia"] = "BAIXA"
             casos.update_one({"aluno._id": ObjectId(aluno_id)}, {"$set": caso})
+        if data["RA"] == "Vazio" or data["nome"] == "Vazio" or data["turma"] == "Vazio":
+            aluno["situacao"] = "INCOMPLETO"
+        else:
+            aluno["situacao"] = "COMPLETO"
         alunos.update_one({"_id": ObjectId(aluno_id)}, {"$set": aluno})
         return jsonify({"message": "User updated successfully"}), 200
     except Exception as e:
@@ -196,7 +232,7 @@ def delete_aluno(aluno_id):
         if aluno:
             casos.delete_one({"aluno._id": ObjectId(aluno_id)})
             alunos.delete_one({"_id": ObjectId(aluno_id)})
-            return {"message": "Aluno deleted successfully"}, 200
+            return {"message": "Aluno excluido com sucesso successfully"}, 200
         else:
             return {"error": "Aluno not found"}, 404
     except Exception as e:
@@ -208,6 +244,30 @@ def getAlunos():
     try:
         alunos_list = []
         for alunos1 in alunos.find():
+            alunos1['_id'] = str(alunos1['_id'])
+            alunos_list.append(alunos1)
+        return jsonify(alunos_list), 200
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+@alunos_bp.route('/alunoBuscaAtiva/completo', methods=['GET'])
+@jwt_required()
+def getAlunosCompleto():
+    try:
+        alunos_list = []
+        for alunos1 in alunos.find({"situacao": "COMPLETO"}):
+            alunos1['_id'] = str(alunos1['_id'])
+            alunos_list.append(alunos1)
+        return jsonify(alunos_list), 200
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+@alunos_bp.route('/alunoBuscaAtiva/incompleto', methods=['GET'])
+@jwt_required()
+def getAlunosIncompleto():
+    try:
+        alunos_list = []
+        for alunos1 in alunos.find({"situacao": "INCOMPLETO"}):
             alunos1['_id'] = str(alunos1['_id'])
             alunos_list.append(alunos1)
         return jsonify(alunos_list), 200
@@ -229,8 +289,7 @@ def getAlunosID(aluno_id):
             return jsonify({"error": "Aluno não encontrado"}), 404
     except Exception as e:
         return {"error": str(e)}, 500
-    
-
+  
 
 @alunos_bp.route('/alunoBuscaAtiva/caso/<caso_id>', methods=['GET'])
 @jwt_required()
@@ -265,3 +324,12 @@ def update_status(tarefas):
             else:
                 tarefa["status"] = "Em andamento"
     return tarefas
+
+
+@alunos_bp.route('/alunoBuscaAtiva/pendencias', methods=['GET'])
+def getPendencias():
+    try:
+        pend = alunos.count_documents({"situacao": "INCOMPLETO"})
+        return jsonify({"pendencias": pend}), 200
+    except Exception as e:
+        return {"error": str(e)}, 500

@@ -4,6 +4,8 @@ from config import accounts, tokens
 from bson.objectid import ObjectId
 from flask_bcrypt import Bcrypt
 import os
+import random
+import string
 
 usuarios_bp = Blueprint('usuarios', __name__)
 
@@ -23,17 +25,17 @@ def test():
 def register():
     try:
         data = request.get_json()
-        encrypted_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+        senha = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
         user = {
             "nomeusuario": data["nomeusuario"],
-            "password": encrypted_password,
+            "password": bcrypt.generate_password_hash(senha).decode('utf-8'),
             "permissao": data["permissao"].upper(),
             "nome": data["nome"].capitalize()
         }
         if accounts.find_one({"nomeusuario": data["nomeusuario"]}):
             return {"error": "Nome de ususario já existe"}, 400
         accounts.insert_one(user)
-        return {"message": "Usuário resgistrado com sucesso"}, 201
+        return {"message": "Usuário resgistrado com sucesso", "senha" : senha}, 201
     except Exception as e:
         return {"error": str(e)}, 500
 
@@ -68,16 +70,28 @@ def updateUser(user_id):
     try:
         data = request.get_json()
         user = accounts.find_one({"_id": ObjectId(user_id)})
+
         if data["nomeusuario"] != user["nomeusuario"] and accounts.find_one({"nomeusuario": data["nomeusuario"]}):
             return {"error": "Nome de usuario ja existe"}, 400
         if data["nomeusuario"] != user["nomeusuario"]:
             user["nomeusuario"] = data["nomeusuario"]
         if data["nome"] != user["nome"]:
             user["nome"] = data["nome"]
-        if data["permissao"] != user["permissao"]:
-            user["permissao"] = data["permissao"]
+        user["permissao"] = data["permissao"].upper()
         accounts.update_one({"_id": ObjectId(user_id)}, {"$set": user})
         return jsonify({"message": "User updated successfully"}), 200
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+@usuarios_bp.route('/usuarios/senha/<user_id>', methods=['PUT'])
+@jwt_required()
+def updateSenha(user_id):
+    try:
+        data = request.get_json()
+        user = accounts.find_one({"_id": ObjectId(user_id)})
+        user["password"] = bcrypt.generate_password_hash(data["password"]).decode('utf-8')
+        accounts.update_one({"_id": ObjectId(user_id)}, {"$set": user})
+        return jsonify({"message": "Senha atualizada com sucesso"}), 200
     except Exception as e:
         return {"error": str(e)}, 500
 
