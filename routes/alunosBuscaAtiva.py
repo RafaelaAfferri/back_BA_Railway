@@ -1,10 +1,12 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, send_file, make_response
 from flask_jwt_extended import jwt_required
 from bson.objectid import ObjectId
 from config import alunos, casos
 import datetime
 import pytz
 import pandas as pd
+import io
+import xlsxwriter
 
 alunos_bp = Blueprint('alunos', __name__)
 
@@ -60,7 +62,7 @@ def registerAluno():
         for numero, lista_dfs in dfs_agrupados.items():
             dfs_finais[numero] = pd.concat(lista_dfs, ignore_index=True)
         
-
+        formados=[]
 
         for key in dfs_finais:
             df = dfs_finais[key]
@@ -79,14 +81,24 @@ def registerAluno():
             datas = df["Data Nascimento"].tolist()
             situacoes = df["Situação Aluno"].tolist()
 
-                        
+               
             alunos_list = alunos.find({"turma": { "$regex": f"^{key}", "$options": "i" }})
             #deleta alunos que não existem mais
             
             for aluno in alunos_list:
-                if aluno["nome"] not in nomes:
-                    casos.delete_one({"aluno._id": ObjectId(aluno["_id"])})
-                    alunos.delete_one({"_id": ObjectId(aluno["_id"])})
+                if aluno["RA"] not in ras:
+                    alunos.find_one({"_id": ObjectId(aluno["_id"])})
+                    if aluno["turma"][0] == "9":
+                        formados.append(aluno["RA"])
+                        
+                    elif int(aluno["atualizacao"]) - int(datetime.datetime.now().year) > 1:
+                        casos.delete_one({"aluno._id": ObjectId(aluno["_id"])})
+                        alunos.delete_one({"_id": ObjectId(aluno["_id"])})
+                    elif aluno["ativo"] == "sim":
+                        aluno["ativo"] = "nao"
+                        aluno["atualizacao"] = datetime.datetime.now().year
+
+
 
             for i in range(len(nomes)):
                 if tegs[i] == "UTILIZANDO":
@@ -121,6 +133,8 @@ def registerAluno():
                 data["responsavel2"] = ''
                 data["faltas"] = 0
                 data["utiliz_teg"] = tegs[i]
+                data["atualizacao"] = datetime.datetime.now().year
+                data["ativo"] = "sim"
                 alunos.insert_one(data)
                 caso = {}
                 caso["ligacoes"] = []
@@ -131,6 +145,79 @@ def registerAluno():
                 caso["faltas"] = int(data["faltas"])
                 caso["urgencia"] = "INDEFINIDA"
                 casos.insert_one(caso)
+        turmas_existentes = alunos.distinct("turma")
+        for turma in turmas_existentes:
+            if turma not in dict_turmas:
+                alunos_list = alunos.find({"turma": turma})
+                for aluno in alunos_list:
+                    if aluno["turma"][0] == "9":
+                        formados.append(aluno["RA"])
+                    elif int(aluno["atualizacao"]) - int(datetime.datetime.now().year) > 1:
+                        casos.delete_one({"aluno._id": ObjectId(aluno["_id"])})
+                        alunos.delete_one({"_id": ObjectId(aluno["_id"])})
+                    elif aluno["ativo"] == "sim":
+                        aluno["ativo"] = "nao"
+                        aluno["atualizacao"] = datetime.datetime.now().year
+        if len(formados) > 0:
+            print(formados)
+            print("entrou")
+            output = io.BytesIO()
+            workbook = xlsxwriter.Workbook(output)
+            worksheet = workbook.add_worksheet("Alunos_Formados")
+            worksheet.write("A1", "RA")
+            worksheet.write("B1", "Nome")
+            worksheet.write("C1", "Turma")
+            worksheet.write("D1", "Responsável")
+            worksheet.write("F1", "dataNascimento")
+            worksheet.write("G1", "Ano de Formatura")
+            for i in range(len(formados)):
+                aluno = alunos.find_one({"RA": formados[i]})
+                worksheet.write(f"A{i+2}", formados[i])
+                worksheet.write(f"B{i+2}", aluno["nome"])
+                worksheet.write(f"C{i+2}", aluno["turma"])
+                worksheet.write(f"D{i+2}", aluno["responsavel"])
+                worksheet.write(f"E{i+2}", aluno["endereco"])
+                worksheet.write(f"F{i+2}", aluno["dataNascimento"])
+                worksheet.write(f"G{i+2}", datetime.datetime.now().year)
+            
+            worksheet2 = workbook.add_worksheet("Casos_Alunos")
+            worksheet2.write("A1", "RA")
+            worksheet2.write("B1", "Nome")
+            worksheet2.write("C1", "Ligações")
+            worksheet2.write("D1", "Visitas")
+            worksheet2.write("E1", "Atendimentos")
+
+            for i in range(len(formados)):
+                aluno = alunos.find_one({"RA": formados[i]})
+                caso = casos.find_one({"aluno.RA": formados[i]})
+                worksheet2.write(f"A{i+2}", formados[i])
+                worksheet2.write(f"B{i+2}", aluno["nome"])
+                worksheet2.write(f"C{i+2}", len(caso["ligacoes"]))
+                worksheet2.write(f"D{i+2}", len(caso["visitas"]))
+                worksheet2.write(f"E{i+2}", len(caso["atendimentos"]))
+                casos.delete_one({"aluno._id": ObjectId(aluno["_id"])})
+                alunos.delete_one({"_id": ObjectId(aluno["_id"])})
+
+            workbook.close()
+            output.seek(0)
+
+            filename = f"Alunos_Formados_{datetime.datetime.now().year}.xlsx"
+
+            response = make_response(
+                send_file(
+                    output,
+                    mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    as_attachment=True,
+                    download_name=filename
+                )
+            )
+
+            # Add headers to response
+            response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+            response.headers['Access-Control-Expose-Headers'] = 'Content-Disposition'
+
+            return response
+
         return {"message": "Alunos registrados com sucesso"}, 201
     except Exception as e:
         print(str(e))
@@ -139,7 +226,7 @@ def registerAluno():
 
 @alunos_bp.route('/alunoBuscaAtivaOne', methods=['POST'])
 @jwt_required()
-def registerAlunoOne():
+def registerAlunoOne(): 
     try:
         data = request.get_json()
         if alunos.find_one({"RA": data["RA"]}):
@@ -148,6 +235,9 @@ def registerAlunoOne():
         data["turma"] = str(data["turma"][0]) + data["turma"][1].upper()
         data["dataNascimento"] = data["dataNascimento"]
         data["tarefas"] = []
+        data["situacao"] = "COMPLETO"
+        data["ativo"] = "sim"
+        data["atualizacao"] = datetime.datetime.now().year
         alunos.insert_one(data)
         caso = {}
         caso["ligacoes"] = []
@@ -235,6 +325,15 @@ def delete_aluno(aluno_id):
             return {"message": "Aluno excluido com sucesso successfully"}, 200
         else:
             return {"error": "Aluno not found"}, 404
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+@alunos_bp.route('/alunoBuscaAtiva/deletar', methods=['DELETE'])
+def deleteall():
+    try:
+        alunos.delete_many({})
+        casos.delete_many({})
+        return {"message": "Alunos excluidos com sucesso"}, 200
     except Exception as e:
         return {"error": str(e)}, 500
 
