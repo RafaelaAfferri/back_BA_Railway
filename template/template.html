@@ -37,72 +37,104 @@
 
 
     <div class="ligacoes">
-        <h3>LIGAÇÕES</h3>
-        {% for ligacao in ligacoes %}
-        <table class="ligacao-table">
-            <tr>
-                <td class="gray-bg"><b>ABAE RESPONSÁVEL:</b></td>
-                <td>{{ ligacao.abae }}</td>
-            </tr>
-            <tr>
-                <td class="gray-bg"><b>DATA DA LIGAÇÃO:</b></td>
-                <td>{{ ligacao.data }}</td>
-            </tr>
-            <tr>
-                <td class="gray-bg"><b>TELEFONE:</b></td>
-                <td>{{ ligacao.telefone }}</td>
-            </tr>
-            <tr>
-                <td class="gray-bg"><b>OBSERVAÇÕES:</b></td>
-                <td>{{ ligacao.observacao }}</td>
-            </tr>
-        </table>
-        {% endfor %}
+        {%if ligacoes %}
+            <h3>LIGAÇÕES</h3>
+            {% for ligacao in ligacoes %}
+            <table class="ligacao-table">
+                <tr>
+                    <td class="gray-bg"><b>ABAE RESPONSÁVEL:</b></td>
+                    <td>{{ ligacao.abae }}</td>
+                </tr>
+                <tr>
+                    <td class="gray-bg"><b>DATA DA LIGAÇÃO:</b></td>
+                    <td>{{ ligacao.data }}</td>
+                </tr>
+                <tr>
+                    <td class="gray-bg"><b>TELEFONE:</b></td>
+                    <td>{{ ligacao.telefone }}</td>
+                </tr>
+                <tr>
+                    <td class="gray-bg"><b>OBSERVAÇÕES:</b></td>
+                    <td>{{ ligacao.observacao }}</td>
+                </tr>
+            </table>
+            {% endfor %}
+        {%endif%}
     </div>
 
 
     <div class="visitas">
-        <h3>VISITAS DOMICILIARES</h3>
-        {% for visita in visitas %}
-        <table class="visitas-table">
-            <tr>
-                <td class="gray-bg"><b>ABAE RESPONSÁVEL:</b></td>
-                <td>{{ visita.abae }}</td>
-            </tr>
-            <tr>
-                <td class="gray-bg"><b>DATA DA VISITA:</b></td>
-                <td>{{ visita.data }}</td>
-            </tr>
-            <tr>
-                <td class="gray-bg"><b>PARECER FINAL:</b></td>
-                <td>{{ visita.observacao }}</td>
-            </tr>
-        </table>
-        {% endfor %}
+        {%if visitas %}
+            <h3>VISITAS DOMICILIARES</h3>
+            {% for visita in visitas %}
+            <table class="visitas-table">
+                <tr>
+                    <td class="gray-bg"><b>ABAE RESPONSÁVEL:</b></td>
+                    <td>{{ visita.abae }}</td>
+                </tr>
+                <tr>
+                    <td class="gray-bg"><b>DATA DA VISITA:</b></td>
+                    <td>{{ visita.data }}</td>
+                </tr>
+                <tr>
+                    <td class="gray-bg"><b>PARECER FINAL:</b></td>
+                    <td>{{ visita.observacao }}</td>
+                </tr>
+            </table>
+            {% endfor %}
+        {%endif%}
     </div>
 
     <div class="atendimento">
-        <h3>ANTEDIMENTOS AOS  RESPONSÁVEIS</h3>
-        {% for atendimento in atendimentos %}
-        <table class="atendimento-table">
-            <tr>
-                <td class="gray-bg"><b>FEITO POR:</b></td>
-                <td>{{ atendimento.func }}</td>
-            </tr>
-            <tr>
-                <td class="gray-bg"><b>DATA Do ATENDIMENTO:</b></td>
-                <td>{{ atendimento.data }}</td>
-            </tr>
-            <tr>
-                <td class="gray-bg"><b>RESPONSÁVEL PRESENTE:</b></td>
-                <td>{{ atendimento.responsavel }}</td>
-            </tr>
-            <tr>
-                <td class="gray-bg"><b>OBERSAVAÇÕES:</b></td>
-                <td>{{ atendimento.observacao }}</td>
-            </tr>
-        </table>
-        {% endfor %}
+        {% if atendimentos %}
+            <h3>ATENDIMENTOS AOS RESPONSÁVEIS</h3>
+            {% for atendimento in atendimentos %}
+            <table class="atendimento-table">
+                <tr>
+                    <td class="gray-bg"><b>FEITO POR:</b></td>
+                    <td>{{ atendimento.func }}</td>
+                </tr>
+                <tr>
+                    <td class="gray-bg"><b>DATA DO ATENDIMENTO:</b></td>
+                    <td>{{ atendimento.data }}</td>
+                </tr>
+                <tr>
+                    <td class="gray-bg"><b>RESPONSÁVEL PRESENTE:</b></td>
+                    <td>{{ atendimento.responsavel }}</td>
+                </tr>
+                <tr>
+                    <td class="gray-bg"><b>OBERSEVAÇÕES:</b></td>
+                    <td>{{ atendimento.observacao }}</td>
+                </tr>
+            </table>
+            {% endfor %}
+        {%endif%}
+    </div>
+
+    <div class="tarefas">
+        {%if tarefas %}
+            <h3>TAREFAS</h3>
+            {% for tarefa in tarefas %}
+            <table class="tarefas-table">
+                <tr>
+                    <td class="gray-bg"><b>MATÉRIA:</b></td>
+                    <td>{{ tarefa.titulo }}</td>
+                </tr>
+                <tr>
+                    <td class="gray-bg"><b>STATUS:</b></td>
+                    <td>{{ tarefa.status }}</td>
+                </tr>
+                <tr>
+                    <td class="gray-bg"><b>DESCRIÇÃO:</b></td>
+                    <td>{{ tarefa.observacoes }}</td>
+                </tr>
+                <tr>
+                    <td class="gray-bg"><b>DATA DE ENTREGA:</b></td>
+                    <td>{{ tarefa.dataFinal }}</td>
+                </tr>
+            </table>
+            {% endfor %}
+        {%endif%}
     </div>
     
   

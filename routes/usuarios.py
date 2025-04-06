@@ -21,7 +21,6 @@ def test():
     return 'hello'
 
 @usuarios_bp.route('/usuarios', methods=['POST'])
-@jwt_required()
 def register():
     try:
         data = request.get_json()

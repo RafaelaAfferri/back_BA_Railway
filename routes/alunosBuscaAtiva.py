@@ -10,21 +10,41 @@ import xlsxwriter
 
 alunos_bp = Blueprint('alunos', __name__)
 
+
+def is_html(file):
+    """ Verifica se o arquivo é HTML disfarçado de .xls """
+    content = file.read(1024).decode(errors="ignore")  # Lê os primeiros 1024 bytes
+    file.seek(0)  # Volta para o início do arquivo
+    return "<html" in content.lower() or "<table" in content.lower()
+
 @alunos_bp.route('/alunoBuscaAtiva', methods=['POST'])
 @jwt_required()
 def registerAluno():
     try:
         # data = request.get_json()
-        if 'file' not in request.files:
+        if 'files' not in request.files:
             return {"error": "Nenhum arquivo foi enviado"}, 400
-        file = request.files['file']
-
-        excel_file = pd.ExcelFile(file)
-        sheet_names = excel_file.sheet_names
+        files = request.files.getlist('files')  # Obtém a lista de arquivos enviados
         dict_turmas = {}
-        for sheet in sheet_names:
+        
+        for file in files:
+            filename = file.filename.lower()
             
-            df = pd.read_excel(file, sheet_name=sheet)
+            
+            if filename.endswith(".xlsx"):
+                df = pd.read_excel(file, engine="openpyxl")
+            elif filename.endswith(".xls"):
+                df = pd.read_excel(file, engine="xlrd")
+            else:
+                return {"error": "Formato de arquivo não suportado. Envie um arquivo .xls ou .xlsx"}, 400
+            
+
+            df = df.reset_index(drop=True)
+            # Procurar a palavra "Turma"
+            posicoes = df.isin(["Turma"]).values.nonzero()
+            
+            # Agora carregamos o arquivo com o engine correto
+           
             #endereço, telefone, telefone2, responsavel2, faltas
             posicoes = df.isin(["Turma"]).values.nonzero()
             if len(posicoes[0]) == 0 or len(posicoes[1]) == 0:
@@ -328,14 +348,6 @@ def delete_aluno(aluno_id):
     except Exception as e:
         return {"error": str(e)}, 500
 
-@alunos_bp.route('/alunoBuscaAtiva/deletar', methods=['DELETE'])
-def deleteall():
-    try:
-        alunos.delete_many({})
-        casos.delete_many({})
-        return {"message": "Alunos excluidos com sucesso"}, 200
-    except Exception as e:
-        return {"error": str(e)}, 500
 
 @alunos_bp.route('/alunoBuscaAtiva', methods=['GET'])
 @jwt_required()

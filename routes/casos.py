@@ -18,19 +18,25 @@ import xlsxwriter
 casos_bp = Blueprint('casos', __name__)
 
 
-@casos_bp.route('/casos', methods=['GET'])
+@casos_bp.route('/casos', methods=['POST'])
 def get_casos():
     try:
         id_aluno = request.args.get('aluno_id')
-        status = request.args.get('status')
-        ano = request.args.get('ano')
-        turma = request.args.get('turma')
+        data = request.get_json()
+        status = None
+        ano = None
+        turma = None
+        if 'status' in data:
+            status = data["status"]
+        if 'ano' in data:
+            ano = data["ano"]
+        if 'turma' in data:
+            turma = data["turma"]
 
-
-
+        
         if turma or ano:
             query = {}
-
+            
             if turma:
                 if len(turma) == 1:
                     query["aluno.turma"] = {"$regex": f"^{turma}"}
@@ -47,14 +53,13 @@ def get_casos():
                 filtered_data = []
                 for caso in data:
                     # Filtrar visitas, ligacoes e atendimentos para o ano especificado
-                    caso["visitas"] = [visita for visita in caso["visitas"] if visita["data"][:4] == ano]
-                    caso["ligacoes"] = [ligacao for ligacao in caso["ligacoes"] if ligacao["data"][:4] == ano]
-                    caso["atendimentos"] = [atendimento for atendimento in caso["atendimentos"] if atendimento["data"][:4] == ano]
-
+                    caso["visitas"] = [visita for visita in caso["visitas"] if int(visita["data"][:4]) in ano]
+                    caso["ligacoes"] = [ligacao for ligacao in caso["ligacoes"] if int(ligacao["data"][:4]) in ano]
+                    caso["atendimentos"] = [atendimento for atendimento in caso["atendimentos"] if int(atendimento["data"][:4]) in ano]
+                    
                     # Adicionar caso somente se houver visitas, ligações ou atendimentos no ano
                     if caso["visitas"] or caso["ligacoes"] or caso["atendimentos"]:
                         filtered_data.append(caso)
-
                 return jsonify({"caso": filtered_data}), 200
 
             return jsonify({"caso": data}), 200
@@ -82,9 +87,10 @@ def get_casos():
         for caso in data:
             caso['_id'] = str(caso['_id'])
             caso["aluno"]["_id"] = str(caso["aluno"]["_id"])
-            
+        
         return jsonify({"caso": data}), 200
     except Exception as e:
+        print(e)
         return {"error": str(e)}, 500
     
 @casos_bp.route('/casos/<string:id>', methods=['PUT'])
@@ -120,12 +126,13 @@ def update_caso(id):
 
 
 
-@casos_bp.route('/casos/relatorio-geral', methods=['GET'])
+@casos_bp.route('/casos/relatorio-geral', methods=['POST'])
 @jwt_required()
 def relatorio_geral():
     try:
-        turma = request.args.get('turma')
-        ano = request.args.get('ano')
+        data = request.get_json()
+        turma = data["turma"]
+        anos = data["anos"]
         n_visita = 0
         n_ligacao = 0
         n_atendimento = 0
@@ -513,6 +520,7 @@ def gerar_relatorio():
             "ligacoes": data["ligacoes"],
             "visitas": data["visitas"],
             "atendimentos" : data["atendimentos"],
+            "tarefas": data["tarefas"]
         }
 
         output_pdf_path = os.path.abspath('relatorio.pdf')
