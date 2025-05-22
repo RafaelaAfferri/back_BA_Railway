@@ -10,12 +10,42 @@ import xlsxwriter
 
 alunos_bp = Blueprint('alunos', __name__)
 
+import pandas as pd
+import io
 
-def is_html(file):
-    """ Verifica se o arquivo é HTML disfarçado de .xls """
-    content = file.read(1024).decode(errors="ignore")  # Lê os primeiros 1024 bytes
-    file.seek(0)  # Volta para o início do arquivo
-    return "<html" in content.lower() or "<table" in content.lower()
+def tratar_arquivo_excel(file_storage):
+    filename = file_storage.filename.lower()
+
+    # Se for .xlsx, carrega normal
+    if filename.endswith('.xlsx'):
+        df = pd.read_excel(file_storage, engine='openpyxl')
+        return df
+
+    # Se for .xls, precisamos verificar se é fake HTML
+    file_content = file_storage.read()
+    file_storage.seek(0)  # Volta o ponteiro para permitir nova leitura
+
+    if file_content[:100].lower().startswith((b'<html', b'<table', b'<!doc')):
+        # É um fake HTML
+        tabelas = pd.read_html(io.BytesIO(file_content))
+        df_unificado = pd.concat(tabelas, ignore_index=True)
+        return df_unificado
+    else:
+        # XLS legítimo, carrega normalmente
+        df = pd.read_excel(file_storage, engine='xlrd')
+        return df
+
+def limpar_dataframe(df):
+    # Se a primeira linha for toda NaN, remove
+    if df.iloc[0].isnull().all():
+        df = df.iloc[1:].reset_index(drop=True)
+
+    # Agora, pega a primeira linha como header
+    df.columns = df.iloc[0]
+    df = df[1:].reset_index(drop=True)
+
+    return df
+
 
 @alunos_bp.route('/alunoBuscaAtiva', methods=['POST'])
 @jwt_required()
@@ -31,12 +61,10 @@ def registerAluno():
             filename = file.filename.lower()
             
             
-            if filename.endswith(".xlsx"):
-                df = pd.read_excel(file, engine="openpyxl")
-            elif filename.endswith(".xls"):
-                df = pd.read_excel(file, engine="xlrd")
-            else:
-                return {"error": "Formato de arquivo não suportado. Envie um arquivo .xls ou .xlsx"}, 400
+            try:
+                df = tratar_arquivo_excel(file)
+            except Exception as e:
+                return {"error": f"Erro ao processar arquivo {file.filename}: {str(e)}"}, 400
             
 
             df = df.reset_index(drop=True)
@@ -52,13 +80,24 @@ def registerAluno():
             row = posicoes[0][0]
             col = posicoes[1][0]
 
+            posicoes2 = df.isin(["Descrição"]).values.nonzero()
+            if len(posicoes2[0]) == 0 or len(posicoes2[1]) == 0:
+                return {"error": "Palavra 'Descrição' não encontrada na planilha"}, 400
+            row2 = posicoes2[0][0]
+            col2 = posicoes2[1][0]
+
+            desc_val = df.iat[row2, col2 + 1] if (col2 + 1) < df.shape[1] else ""
+            if "EJA" in desc_val:
+                desc_info = " - EJA"
+            else:
+                desc_info = ""
 
             turma_val = df.iat[row, col + 1] if (col + 1) < df.shape[1] else ""
             turma_info = turma_val.split(" ") if turma_val else []
             if len(turma_info) < 3:
                 return {"error": "Formato inesperado na célula da turma"}, 400
-            turma_info = turma_info[2]
-
+            turma_info = turma_info[2] + desc_info
+            
             if turma_info in dict_turmas:
                 return {"error": f"Turma {turma_info} está duplicada na planilha"}, 400
             dict_turmas[turma_info]=df
@@ -69,8 +108,8 @@ def registerAluno():
         dfs_agrupados = {}
         for turma, df in dict_turmas_sorted.items():
             df_novo = df.iloc[3:].reset_index(drop=True)
-            df_novo.columns = df_novo.iloc[0]
-            df_novo = df_novo[1:].reset_index(drop=True)
+            df_novo = limpar_dataframe(df_novo)
+
 
             numero_turma = turma[0]  # Pega o primeiro caractere da turma
             if numero_turma not in dfs_agrupados:
@@ -86,7 +125,6 @@ def registerAluno():
 
         for key in dfs_finais:
             df = dfs_finais[key]
-
             required_columns = ["Nome do Aluno", "RA Prodesp", "Filiação 1", "turma", "Utiliz. T.E.G.", "Data Nascimento", "Situação Aluno"]
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
